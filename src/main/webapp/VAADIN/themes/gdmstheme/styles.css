@@ -1,0 +1,207 @@
+@import "../reindeer/styles.css";
+
+.gdmscustomcomponent .v-customcomponent {
+   padding: 1px;
+}
+div.gdmscustomcomponent
+{
+	/*background-color: lightsteelblue;*/
+	border: thin darkslategrey solid; 
+}
+
+.subtitlelabel {
+	line-height: normal;
+    text-decoration: none;
+	font-family: Verdana;
+	font-size: 20px;
+	font-weight: bold;
+	color: #44698b;
+	letter-spacing: -0.02em;
+}
+
+.v-loading-indicator,  
+.v-loading-indicator-delay,  
+.v-loading-indicator-wait {  
+   width: 100%;  
+   height: 100%;  
+   margin: 0;  
+   background-position: 50%;  
+   /* background-color: gray; */  
+   background-repeat: no-repeat;  
+   background-attachment: fixed;   
+   opacity: .8;  
+   -ms-filter: alpha(opacity=80);  
+   filter: alpha(opacity=80);  
+}
+
+.verticalLayoutMapOptionWindow .v-verticallayout-margin
+{
+    padding: 1px;
+}
+div.verticalLayoutMapOptionWindow
+{
+	/*background-color: lavenderblush;*/
+	border: thin darkslategrey solid; 
+	margin-top: 10px;
+    margin-right: 5px;
+	margin-left: 10px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+}
+
+.errmessage {
+    font-family: Verdana;
+    font-size: 9px;
+    font-weight: normal;
+    color: red;
+    line-height: normal;
+    overflow: hidden; 
+    text-shadow: none; 
+}
+
+.v-menubar {
+ /* background: grey; */
+ /* background: blue; */
+ background: transparent;
+ color:red;
+ font-weight: bold;
+ font-color: blue;
+}
+
+.v-textfield.v-textfield-searchfield.searchfield { /*  searchfield  is a TextField used in GDMSSearchBox */
+    border:none;
+	background: transparent;
+}
+
+.searchfield {
+   background: transparent;
+   border: none;
+}
+
+.searchfield.v-textfield {
+   background: transparent;
+   border: none;
+} 
+
+.loginWindow.v-window {
+ /*background: #80ff80;  pale green */
+  background: green;
+  border: none;
+}
+
+_lblLoginMessage.v-label {
+	color:red;
+}
+
+
+.v-tree {
+	text-align: left; /* Force default alignment */
+	overflow: hidden;
+	padding: 1px 0;
+	outline: none;
+	font-color: red;
+}
+
+
+/*
+.searchSelect.v-select-select {
+   background: transparent;
+   border: none;
+} */
+
+.v-select {
+   background: transparent;
+   border: none;
+}
+
+.v-select-twincol {
+	/*background: grey;
+    color:blue;
+    border-color: red; */
+    white-space: nowrap;
+    overflow: scroll;
+}
+
+.v-select-twincol .v-textfield {
+	display: block;
+	float: left;
+	clear: left;
+}
+  .v-select-twincol-options-caption {}
+  .v-select-twincol-selections-caption {}
+  .v-select-twincol-options {}
+  .v-select-twincol-buttons {}
+    .v-button {}
+      .v-button-wrap {}
+        .v-button-caption {}
+    .v-select-twincol-deco {}
+ .v-select-twincol-selections {}
+
+.v-modified,
+.v-richtextarea.v-modified iframe.gwt-RichTextArea,
+.v-checkbox.v-modified,
+.v-modified .v-select-option,
+.v-modified .v-textfield,
+.v-modified .v-datefield-calendarpanel,
+.v-modified .v-select-select,
+.v-modified .v-select-twincol-selections,
+.v-modified .v-select-twincol-options,
+.v-modified .v-slider-base {
+	background: #ffffe0;
+}
+
+/*
+.iconbutton.v-button {
+   background: transparent;
+   border: none;
+}  */
+
+/*
+.v-button {
+   background: transparent;
+   border: none;
+} */
+		
+/*.v-textfield-searchfield {
+    border: 1px solid #b6b6b6;
+    border-top-color: #9d9d9d;
+    border-bottom-color: #d6d6d6;
+    border-right-color: #d6d6d6;
+    opacity: 1.0;
+    filter: none;
+} */
+
+
+/* Minimal tabsheet on blue background */
+.blue .v-tabsheet-tabs-minimal .v-tabsheet-spacertd div,
+.blue .v-tabsheet-tabs-minimal .v-tabsheet-tabitem,
+.blue .v-tabsheet-tabs-minimal .v-tabsheet-tabitem-selected  {
+        border-color: #7c8a91;
+}
+.blue .v-tabsheet-tabs-minimal .v-tabsheet-caption-close {
+        color: #7c8a91;
+}
+.blue .v-tabsheet-tabs-minimal .v-tabsheet-caption-close:hover {
+        color: #BCD3DE;
+        background: #778d98;
+}
+.blue .v-tabsheet-tabs-minimal .v-tabsheet-caption-close:active {
+        background: #4f6874;
+}
+
+
+/* Lay the options horizontally */
+.v-select-optiongroup-horizontal .v-select-option {
+    display: inline-block;
+}
+
+/* Avoid wrapping if the layout is too tight */
+.v-select-optiongroup-horizontal {
+    white-space: nowrap;
+}
+
+/* Some extra spacing is needed */
+.v-select-optiongroup-horizontal
+  .v-select-option.v-radiobutton {
+    padding-right: 10px;
+}

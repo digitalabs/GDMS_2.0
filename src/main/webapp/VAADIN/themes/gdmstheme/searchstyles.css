@@ -1,0 +1,13 @@
+@import url(../reindeer/styles.css);
+
+.searchSelect.v-select-select {
+   background: transparent;
+   border: none;
+}
+
+
+.iconbutton.v-button {
+   background: transparent;
+   border: none;
+} 
+		

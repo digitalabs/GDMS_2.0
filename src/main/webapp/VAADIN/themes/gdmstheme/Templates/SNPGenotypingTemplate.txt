@@ -1,0 +1,22 @@
+"Fill Markers, Accessions & Genotyping data in tab-delimited Format as shown below, Heterozygote data representation "":"" or ""/"""				
+
+
+Institute	ExampleInstitute
+PI	EXPI
+Email	EXCOT@exinst.org
+Incharge_Person	Trushar
+Dataset_Name	SNP dataset1
+Purpose_Of_Study	Mapping
+Dataset_Description	EXP dataset DESC
+Genus	Gen
+Species	SP
+Missing_Data	?
+Creation_Date	YYYY-MM-DD
+
+gid's	gid1	gid2	gid3	gid4
+Marker\Genotype	Genotype1	Genotype2	Genotype3	Genotype4
+SNPMarker1	A	A	A	A
+SNPMarker2	C	C	C	?
+SNPMarker3	C	C	C	C
+SNPMarker4	C	C	C	C
+SNPMarker5	A:T	A	A	A
