@@ -82,12 +82,12 @@ public class LoginDialog extends CustomComponent {
 						_loggedInUser = null;
 						return;
 					}
-
-					HibernateSessionProvider hibernateSessionProviderForLocal = _gdmsModel.getHibernateSessionProviderForLocal();
+					try{
+					HibernateSessionProvider hibernateSessionProviderForLocal = _gdmsModel.getManagerFactory().getSessionProviderForLocal();
 					UserDAO userDAOLocal = new UserDAO();
 					userDAOLocal.setSession(hibernateSessionProviderForLocal.getSession());
 					
-					HibernateSessionProvider hibernateSessionProviderForCentral = _gdmsModel.getHibernateSessionProviderForCentral();
+					HibernateSessionProvider hibernateSessionProviderForCentral = _gdmsModel.getManagerFactory().getSessionProviderForCentral();
 					UserDAO userDAOCentral = new UserDAO();
 					userDAOCentral.setSession(hibernateSessionProviderForCentral.getSession());
 					
@@ -122,7 +122,11 @@ public class LoginDialog extends CustomComponent {
 						_loginButton.setDescription("Close");
 					}
 					
-					
+					}catch (Exception e) {
+						//_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving User's information from the Database.", Notification.TYPE_ERROR_MESSAGE);
+						e.printStackTrace();
+						return;
+					}
 				} else if (event.getButton().getDescription().equals("Close")){
 					_mainHomePage.getMainWindow().getWindow().removeWindow(getWindow());
 					_mainHomePage.requestRepaintAfterLogin();
@@ -192,19 +196,19 @@ public class LoginDialog extends CustomComponent {
 					bCorrectPassword = true;
 					_bLoginSuccessful = true;
 					
-					try {
-						
-						WorkbenchDataManagerImpl workbenchDataManagerImpl = new WorkbenchDataManagerImpl(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
+					/*try {
+						GDMSModel.getGDMSModel().getWorkbenchDataManager().getWorkbenchRuntimeData().getUserId()
+						WorkbenchDataManagerImpl workbenchDataManagerImpl = new WorkbenchDataManagerImpl(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal());
 						WorkbenchRuntimeData workbenchRuntimeData = workbenchDataManagerImpl.getWorkbenchRuntimeData();
 						
 						if (null != workbenchRuntimeData){
 							workbenchRuntimeData.setUserId(userid);
 						}
 						
-					} catch (MiddlewareQueryException e) {
+					} catch (Exception e) {
 						_mainHomePage.getMainWindow().getWindow().showNotification(e.getMessage(), Notification.TYPE_ERROR_MESSAGE);
 						return;
-					}
+					}*/
 					
 					break;
 				} else {

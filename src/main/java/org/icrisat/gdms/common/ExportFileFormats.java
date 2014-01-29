@@ -28,6 +28,7 @@ import jxl.write.WritableWorkbook;
 import jxl.write.WriteException;
 import jxl.write.biff.RowsExceededException;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
@@ -56,32 +57,31 @@ public class ExportFileFormats {
 	//	ArrayList<AlleleValues> listOfAlleleValues = new ArrayList<AlleleValues>();
 	//	ArrayList<MarkerNameElement> listOfMarkers = new ArrayList<MarkerNameElement>();
 	private GDMSModel _gdmsModel;		
- 	private static WorkbenchDataManager workbenchDataManager;
-	private static HibernateUtil hibernateUtil;
+	 private static WorkbenchDataManager workbenchDataManager;
+	 private static HibernateUtil hibernateUtil;
 	 HashMap<Object, String> IBWFProjects= new HashMap<Object, String>();
 	 
 	 String bPath="";
      String opPath="";
     
-     //System.out.println(",,,,,,,,,,,,,  :"+bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1));
+     ////System.out.println(",,,,,,,,,,,,,  :"+bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1));
      String pathWB="";
      
 	    String dbNameL="";
-
+	    String instDir="";
+	    int currWorkingProject=0;
 	public ExportFileFormats(){
 		_gdmsModel = GDMSModel.getGDMSModel();
 		
 		try{
-			hibernateUtil = new HibernateUtil(GDMSModel.getGDMSModel().getWorkbenchParams());
+			/*hibernateUtil = new HibernateUtil(GDMSModel.getGDMSModel().getWorkbenchParams());
 			HibernateSessionProvider sessionProvider = new HibernateSessionPerThreadProvider(hibernateUtil.getSessionFactory());
-			workbenchDataManager = new WorkbenchDataManagerImpl(sessionProvider);
-		}catch (FileNotFoundException e) {
-			//_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
-			return;
-		}catch (IOException ei) {
-			//_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
-			return;
-		}catch (URISyntaxException e) {
+			workbenchDataManager = new WorkbenchDataManagerImpl(sessionProvider);*/
+			instDir=_gdmsModel.getWorkbenchDataManager().getWorkbenchSetting().getInstallationDirectory().toString();
+			Project results = _gdmsModel.getWorkbenchDataManager().getLastOpenedProject(_gdmsModel.getWorkbenchDataManager().getWorkbenchRuntimeData().getUserId());
+			currWorkingProject=Integer.parseInt(results.getProjectId().toString());
+			////System.out.println("..........currWorkingProject=:"+currWorkingProject);
+		}catch (MiddlewareQueryException e) {
 			//_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
 			return;
 		}
@@ -214,9 +214,9 @@ public class ExportFileFormats {
 
 		try{
 			boolean condition=false;
-			/*System.out.println("List="+a);
-			System.out.println(" gListExp="+ accList);
-			System.out.println(" mListExp="+ markList);
+			/*//System.out.println("List="+a);
+			//System.out.println(" gListExp="+ accList);
+			//System.out.println(" mListExp="+ markList);
 */
 			//int noOfAccs=accList.size();
 			//int noOfMarkers=markList.size();			
@@ -385,6 +385,16 @@ public class ExportFileFormats {
 		if(!new File(strFilePath).exists())
 	       	new File(strFilePath).mkdir();
 		
+		
+        pathWB=instDir+"/workspace/"+currWorkingProject+"/gdms/output";
+        //System.out.println("pathWB=:"+pathWB);
+        //pathWB="C:/IBWorkflowSystem/workspace/1-TL1_Groundnut/gdms/output";
+        if(!new File(pathWB+"/"+folderName).exists())
+	   		new File(pathWB+"/"+folderName).mkdir();
+        
+	
+		
+		
 		//String strFilePath = fileExport.getAbsolutePath();
 		File generatedFile = new File(strFilePath + "\\" + strFileName + ".txt");
 		int noOfAccs=listOfGIDsSelected.size();
@@ -417,7 +427,7 @@ public class ExportFileFormats {
 				 }
 				SNPMatrix.write("\n"+listOfGIDsSelected.get(j)+"\t"+gname);		
 			    for (int k=0;k<listOfMarkersSelected.size();k++){
-			    	//System.out.println("**************************  :"+dataMap.get(Integer.parseInt(accList.get(j).toString())));
+			    	////System.out.println("**************************  :"+dataMap.get(Integer.parseInt(accList.get(j).toString())));
 			    	markerAlleles=(HashMap)listAlleleValueElementsForGIDsSelected.get(Integer.parseInt(listOfGIDsSelected.get(j).toString()));
 			    	List markerKey = new ArrayList();
 					markerKey.addAll(markerAlleles.keySet());
@@ -436,7 +446,59 @@ public class ExportFileFormats {
 			}					
 			SNPMatrix.close();	
 			
+
 			
+			//String strFilePath = fileExport.getAbsolutePath();
+			File generatedFileWF = new File(pathWB+"\\"+folderName + "\\" + strFileName + ".txt");
+			/*int noOfAccsI=listOfGIDsSelected.size();
+			int noOfMarkersI=listOfMarkersSelected.size();			
+			*/
+			/*int accIndex=1,markerIndex=1;
+			int i;String chVal="";*/
+			HashMap<String,Object> markerAllelesWF= new HashMap<String,Object>();
+			//try {
+				FileWriter datastreamWF = new FileWriter(generatedFileWF);
+				BufferedWriter SNPMatrixWF = new BufferedWriter(datastreamWF);
+				SNPMatrixWF.write("\t");
+				for(int m1 = 0; m1< listOfMarkersSelected.size(); m1++){
+					SNPMatrixWF.write("\t"+listOfMarkersSelected.get(m1));
+				}
+				
+				//int k=0;
+				gid=0;
+				gname="";		
+				
+				for (int j=0;j<listOfGIDsSelected.size();j++){ 
+					Iterator iterator = hashMapOfGIDsAndGNamesSelected.keySet().iterator();
+					String arrList6[];
+					gid=Integer.parseInt(listOfGIDsSelected.get(j).toString());
+					 while (iterator.hasNext()){
+		        	   Object key = iterator.next();
+		        	   if(key.equals(gid)){
+		        		   gname=hashMapOfGIDsAndGNamesSelected.get(key).toString();
+		        	   }
+					 }
+					SNPMatrixWF.write("\n"+listOfGIDsSelected.get(j)+"\t"+gname);		
+				    for (int k=0;k<listOfMarkersSelected.size();k++){
+				    	////System.out.println("**************************  :"+dataMap.get(Integer.parseInt(accList.get(j).toString())));
+				    	markerAllelesWF=(HashMap)listAlleleValueElementsForGIDsSelected.get(Integer.parseInt(listOfGIDsSelected.get(j).toString()));
+				    	List markerKey = new ArrayList();
+						markerKey.addAll(markerAllelesWF.keySet());
+						//for(int m=0; m<markerKey.size();m++){
+							//markerAlleles.
+							if(markerAllelesWF.containsKey(listOfGIDsSelected.get(j).toString()+"!~!"+listOfMarkersSelected.get(k).toString())){
+					    		SNPMatrixWF.write("\t"+markerAllelesWF.get(listOfGIDsSelected.get(j).toString()+"!~!"+listOfMarkersSelected.get(k).toString()));
+					    		
+					    	}else{
+					    		SNPMatrixWF.write("\t");	
+					    	}	
+							
+						//}
+						
+				    }		    	
+				}					
+				SNPMatrixWF.close();	
+				
 
 		} catch (IOException e) {
 			throw new GDMSException(e.getMessage());
@@ -547,7 +609,7 @@ public class ExportFileFormats {
 	
 	
 
-	public List<File> MatrixTextFileDataSSRDataset(
+	public File MatrixTextFileDataSSRDataset(
 			GDMSMain theMainHomePage, ArrayList<AllelicValueWithMarkerIdElement> listOfAllelicValue,
 			ArrayList<Integer> listOfNIDs, ArrayList<MarkerIdMarkerNameElement> listOfAllMarkers,
 			HashMap<Integer, String> hmOfNIDAndNVal, HashMap<Integer, String> hmOfMIdAndMarkerName) throws GDMSException {
@@ -566,45 +628,23 @@ public class ExportFileFormats {
 			}
 		}
 		
-		try{
-
-
-			bPath="C:\\IBWorkflowSystem\\infrastructure\\tomcat\\webapps\\GDMS";
-		    opPath=bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1);
-		       
-		        //System.out.println(",,,,,,,,,,,,,  :"+bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1));
-		   
-		dbNameL=GDMSModel.getGDMSModel().getLocalParams().getDbName();
-		IBWFProjects= new HashMap<Object, String>();
-        List<Project> projects = workbenchDataManager.getProjects();
-        Long projectId = Long.valueOf(0);
-        //System.out.println("testGetProjects(): ");
-        for (Project project : projects) {
-            //System.out.println("  " + project.getLocalDbName());
-            projectId = project.getProjectId();
-            IBWFProjects.put(project.getLocalDbName(),project.getProjectId()+"-"+project.getProjectName());
-        }
-        //System.out.println(".........:"+IBWFProjects.get(dbNameL));
-        
-		}catch (MiddlewareQueryException e) {
-			throw new GDMSException(e.getMessage());
-		}
-		
-        pathWB=opPath+"/IBWorkflowSystem/workspace/"+IBWFProjects.get(dbNameL)+"/gdms/output";
+        pathWB=instDir+"/workspace/"+currWorkingProject+"/gdms/output";
         //System.out.println("pathWB=:"+pathWB);
         //pathWB="C:/IBWorkflowSystem/workspace/1-TL1_Groundnut/gdms/output";
         if(!new File(pathWB+"/"+folderName).exists())
 	   		new File(pathWB+"/"+folderName).mkdir();
         
+	
+		
 		String strFilePath = fileExport.getAbsolutePath()+"\\"+folderName;
 		
 		if(!new File(strFilePath).exists())
 	       	new File(strFilePath).mkdir();
 		
 		//String strFilePath = fileExport.getAbsolutePath();
-		/*System.out.println("file path=:"+strFilePath);
-		System.out.println("**************:"+listOfNIDs);
-		System.out.println("%%%%%%%%%%%%%%%:"+hmOfNIDAndNVal);*/
+		/*//System.out.println("file path=:"+strFilePath);
+		//System.out.println("**************:"+listOfNIDs);
+		//System.out.println("%%%%%%%%%%%%%%%:"+hmOfNIDAndNVal);*/
 		File generatedFile = new File(strFilePath + "\\" + strFileName + ".txt");
 
 		int iNumOfCols = listOfAllMarkers.size() + 2;
@@ -617,8 +657,8 @@ public class ExportFileFormats {
 			String[][] strArrayOfData = new String[iNumOfRows][iNumOfCols];
 
 			int iRow = 1;
-			/*System.out.println("listOfNIDs=:"+listOfNIDs);
-			System.out.println("hmOfNIDAndNVal:"+hmOfNIDAndNVal);*/
+			/*//System.out.println("listOfNIDs=:"+listOfNIDs);
+			//System.out.println("hmOfNIDAndNVal:"+hmOfNIDAndNVal);*/
 			HashMap<Integer, Integer> hmOfGIDAndIndex = new HashMap<Integer, Integer>(); 
 			for (int i = 0; i < listOfNIDs.size(); i++){
 				Integer iGID = listOfNIDs.get(i);
@@ -628,7 +668,7 @@ public class ExportFileFormats {
 				hmOfGIDAndIndex.put(iGID, iRow);
 				iRow += 1;
 			}
-			//System.out.println("...........:"+hmOfGIDAndIndex);
+			////System.out.println("...........:"+hmOfGIDAndIndex);
 			int iCol = 2;
 			HashMap<String, Integer> hmOfMarkerNameAndIndex = new HashMap<String, Integer>();
 			for (int j = 0; j < listOfAllMarkers.size(); j++){
@@ -638,7 +678,7 @@ public class ExportFileFormats {
 				hmOfMarkerNameAndIndex.put(markerName, iCol);
 				iCol += 1;
 			}
-			//System.out.println("--------------------:"+hmOfMarkerNameAndIndex);
+			////System.out.println("--------------------:"+hmOfMarkerNameAndIndex);
 			for (int i = 0; i < listOfAllelicValue.size(); i++){
 				AllelicValueWithMarkerIdElement allelicValueWithMarkerIdElement = listOfAllelicValue.get(i);
 				Integer gid = allelicValueWithMarkerIdElement.getGid();
@@ -648,8 +688,8 @@ public class ExportFileFormats {
 
 				Integer iRowIndex = 0;
 				Integer iColIndex = 0;
-				//System.out.println("gid=:"+gid);
-				//System.out.println(gid+"  ---  "+ hmOfNIDAndNVal.get(gid) + " --- " +markerId+"  ---  "+strMarkerName + " --- " + data);
+				////System.out.println("gid=:"+gid);
+				////System.out.println(gid+"  ---  "+ hmOfNIDAndNVal.get(gid) + " --- " +markerId+"  ---  "+strMarkerName + " --- " + data);
 				if (hmOfGIDAndIndex.containsKey(gid)){
 					iRowIndex = hmOfGIDAndIndex.get(gid);
 					if (hmOfMarkerNameAndIndex.containsKey(strMarkerName)){
@@ -665,15 +705,15 @@ public class ExportFileFormats {
 			pdfFileBuilder.initTempFile();
 			pdfFileBuilder.setVisibleColumnsLength(iNumOfCols);
 			pdfFileBuilder.resetContent();
-			//System.out.println("iNumOfCols=:"+iNumOfCols);
+			////System.out.println("iNumOfCols=:"+iNumOfCols);
 			//if(iNumOfCols < 20) {
 				for (int i = 0; i < iNumOfRows; i++){
 					for (int j = 0; j < iNumOfCols; j++){
 						String strData = strArrayOfData[i][j];
-						//System.out.println(strData);
+						////System.out.println(strData);
 						
 						if ("0/0" == strData){
-							//System.out.println("into condition 0/0");
+							////System.out.println("into condition 0/0");
 							strData = " ";
 						}
 						ssrMatrix.write(strData + "\t");
@@ -703,8 +743,8 @@ public class ExportFileFormats {
 			String[][] strArrayOfData = new String[iNumOfRowsI][iNumOfColsI];
 
 			int iRow = 1;
-			/*System.out.println("listOfNIDs=:"+listOfNIDs);
-			System.out.println("hmOfNIDAndNVal:"+hmOfNIDAndNVal);*/
+			/*//System.out.println("listOfNIDs=:"+listOfNIDs);
+			//System.out.println("hmOfNIDAndNVal:"+hmOfNIDAndNVal);*/
 			HashMap<Integer, Integer> hmOfGIDAndIndex = new HashMap<Integer, Integer>(); 
 			for (int i = 0; i < listOfNIDs.size(); i++){
 				Integer iGID = listOfNIDs.get(i);
@@ -714,7 +754,7 @@ public class ExportFileFormats {
 				hmOfGIDAndIndex.put(iGID, iRow);
 				iRow += 1;
 			}
-			//System.out.println("...........:"+hmOfGIDAndIndex);
+			////System.out.println("...........:"+hmOfGIDAndIndex);
 			int iCol = 2;
 			HashMap<String, Integer> hmOfMarkerNameAndIndex = new HashMap<String, Integer>();
 			for (int j = 0; j < listOfAllMarkers.size(); j++){
@@ -724,7 +764,7 @@ public class ExportFileFormats {
 				hmOfMarkerNameAndIndex.put(markerName, iCol);
 				iCol += 1;
 			}
-			//System.out.println("--------------------:"+hmOfMarkerNameAndIndex);
+			////System.out.println("--------------------:"+hmOfMarkerNameAndIndex);
 			for (int i = 0; i < listOfAllelicValue.size(); i++){
 				AllelicValueWithMarkerIdElement allelicValueWithMarkerIdElement = listOfAllelicValue.get(i);
 				Integer gid = allelicValueWithMarkerIdElement.getGid();
@@ -734,8 +774,8 @@ public class ExportFileFormats {
 
 				Integer iRowIndex = 0;
 				Integer iColIndex = 0;
-				//System.out.println("gid=:"+gid);
-				//System.out.println(gid+"  ---  "+ hmOfNIDAndNVal.get(gid) + " --- " +markerId+"  ---  "+strMarkerName + " --- " + data);
+				////System.out.println("gid=:"+gid);
+				////System.out.println(gid+"  ---  "+ hmOfNIDAndNVal.get(gid) + " --- " +markerId+"  ---  "+strMarkerName + " --- " + data);
 				if (hmOfGIDAndIndex.containsKey(gid)){
 					iRowIndex = hmOfGIDAndIndex.get(gid);
 					if (hmOfMarkerNameAndIndex.containsKey(strMarkerName)){
@@ -752,10 +792,10 @@ public class ExportFileFormats {
 				for (int i = 0; i < iNumOfRowsI; i++){
 					for (int j = 0; j < iNumOfColsI; j++){
 						String strData = strArrayOfData[i][j];
-						//System.out.println(strData);
+						////System.out.println(strData);
 						
 						if ("0/0" == strData){
-							//System.out.println("into condition 0/0");
+							////System.out.println("into condition 0/0");
 							strData = " ";
 						}
 						ssrMatrix.write(strData + "\t");
@@ -771,14 +811,27 @@ public class ExportFileFormats {
 		}
 		
 		
-		List<File> listOfFiles = new ArrayList<File>();
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		/*List<File> listOfFiles = new ArrayList<File>();
 		listOfFiles.add(generatedFile);
 		if(iNumOfCols < 20) {
 			pdfFileBuilder.writeToFile();
 			File file = pdfFileBuilder.file;
 			listOfFiles.add(file);
-		}
-		return listOfFiles;
+		}*/
+		return generatedFile;
 	}
 
 	public File exportMap(
@@ -873,35 +926,13 @@ public class ExportFileFormats {
 		if(!new File(strFilePath).exists())
 	       	new File(strFilePath).mkdir();
 		
-		try{
-
-
-			bPath="C:\\IBWorkflowSystem\\infrastructure\\tomcat\\webapps\\GDMS";
-		    opPath=bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1);
-		       
-		        //System.out.println(",,,,,,,,,,,,,  :"+bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1));
-		   
-			dbNameL=GDMSModel.getGDMSModel().getLocalParams().getDbName();
-			IBWFProjects= new HashMap<Object, String>();
-	        List<Project> projects = workbenchDataManager.getProjects();
-	        Long projectId = Long.valueOf(0);
-	        //System.out.println("testGetProjects(): ");
-	        for (Project project : projects) {
-	            //System.out.println("  " + project.getLocalDbName());
-	            projectId = project.getProjectId();
-	            IBWFProjects.put(project.getLocalDbName(),project.getProjectId()+"-"+project.getProjectName());
-	        }
-	       // System.out.println(".........:"+IBWFProjects.get(dbNameL));
-	        
-		}catch (MiddlewareQueryException e) {
-			throw new GDMSException(e.getMessage());
-		}
 		
-        pathWB=opPath+"/IBWorkflowSystem/workspace/"+IBWFProjects.get(dbNameL)+"/gdms/output";
-       // System.out.println("pathWB=:"+pathWB);
-        //pathWB="C:/IBWorkflowSystem/workspace/1-TL1_Groundnut/gdms/output";
-        if(!new File(pathWB+"/"+folderName).exists())
-	   		new File(pathWB+"/"+folderName).mkdir();
+		 pathWB=instDir+"/workspace/"+currWorkingProject+"/gdms/output";
+	        //System.out.println("pathWB=:"+pathWB);
+	        //pathWB="C:/IBWorkflowSystem/workspace/1-TL1_Groundnut/gdms/output";
+	        if(!new File(pathWB+"/"+folderName).exists())
+		   		new File(pathWB+"/"+folderName).mkdir();
+	        
 		
 		
 		//String strFilePath = fileExport.getAbsolutePath();
@@ -948,9 +979,9 @@ public class ExportFileFormats {
 				String strData = allelicValueElement.getData();
 
 				String strMarkerName = hmOfMIdAndMarkerName.get(markerID);
-				//System.out.println(strMarkerName+"   "+listOfAllMarkers);
+				////System.out.println(strMarkerName+"   "+listOfAllMarkers);
 				if (allMarkers.contains(strMarkerName)){
-					//System.out.println(strMarkerName+"   "+listOfAllMarkers);
+					////System.out.println(strMarkerName+"   "+listOfAllMarkers);
 					Integer colIndex = hashMapOfMakerNamesAndColIndex.get(strMarkerName);
 					int iColIndex = colIndex.intValue();
 
@@ -962,14 +993,14 @@ public class ExportFileFormats {
 							strData=" ";*/
 						Label lGName = new Label((iColIndex), iGIDRowIndex, strData + "");
 						sheet.addCell(lGName);
-						//System.out.println(gid + " --- " + strMarkerName + " --- " + strData);
+						////System.out.println(gid + " --- " + strMarkerName + " --- " + strData);
 					}
 				}
 			}
 
 			workbook.write();			 
 			workbook.close();	
-		
+			
 		} catch (IOException e) {
 			throw new GDMSException(e.getMessage());
 		} catch (RowsExceededException e) {
@@ -1022,9 +1053,9 @@ public class ExportFileFormats {
 					String strData = allelicValueElement.getData();
 
 					String strMarkerName = hmOfMIdAndMarkerName.get(markerID);
-					//System.out.println(strMarkerName+"   "+listOfAllMarkers);
+					////System.out.println(strMarkerName+"   "+listOfAllMarkers);
 					if (allMarkers.contains(strMarkerName)){
-						//System.out.println(strMarkerName+"   "+listOfAllMarkers);
+						////System.out.println(strMarkerName+"   "+listOfAllMarkers);
 						Integer colIndex = hashMapOfMakerNamesAndColIndex.get(strMarkerName);
 						int iColIndex = colIndex.intValue();
 
@@ -1036,7 +1067,7 @@ public class ExportFileFormats {
 								strData=" ";*/
 							Label lGName = new Label((iColIndex), iGIDRowIndex, strData + "");
 							sheetIBWS.addCell(lGName);
-							//System.out.println(gid + " --- " + strMarkerName + " --- " + strData);
+							////System.out.println(gid + " --- " + strMarkerName + " --- " + strData);
 						}
 					}
 				}
@@ -1045,7 +1076,7 @@ public class ExportFileFormats {
 				workbookIBWS.close();	
 			
 			
-	
+
 		} catch (IOException e) {
 			throw new GDMSException(e.getMessage());
 		} catch (RowsExceededException e) {
@@ -1154,7 +1185,7 @@ public class ExportFileFormats {
 			HashMap<Integer, String> hmOfMIdAndMarkerName) throws GDMSException {
 		long time = new Date().getTime();
 		
-		//System.out.println("listofMarkerNamesForSNP=:"+listofMarkerNamesForSNP);
+		////System.out.println("listofMarkerNamesForSNP=:"+listofMarkerNamesForSNP);
 		
 		String strFileName = "Matrix" + String.valueOf(time);
 		File baseDirectory = theMainHomePage.getMainWindow().getApplication().getContext().getBaseDirectory();
@@ -1175,34 +1206,12 @@ public class ExportFileFormats {
 		if(!new File(strFilePath).exists())
 	       	new File(strFilePath).mkdir();
 		
-		try{
-			bPath="C:\\IBWorkflowSystem\\infrastructure\\tomcat\\webapps\\GDMS";
-		    opPath=bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1);
-		       
-		        //System.out.println(",,,,,,,,,,,,,  :"+bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1));
-		   
-			dbNameL=GDMSModel.getGDMSModel().getLocalParams().getDbName();
-			IBWFProjects= new HashMap<Object, String>();
-	        List<Project> projects = workbenchDataManager.getProjects();
-	        Long projectId = Long.valueOf(0);
-	        //System.out.println("testGetProjects(): ");
-	        for (Project project : projects) {
-	            //System.out.println("  " + project.getLocalDbName());
-	            projectId = project.getProjectId();
-	            IBWFProjects.put(project.getLocalDbName(),project.getProjectId()+"-"+project.getProjectName());
-	        }
-	        //System.out.println(".........:"+IBWFProjects.get(dbNameL));
+		 pathWB=instDir+"/workspace/"+currWorkingProject+"/gdms/output";
+	        //System.out.println("pathWB=:"+pathWB);
+	        //pathWB="C:/IBWorkflowSystem/workspace/1-TL1_Groundnut/gdms/output";
+	        if(!new File(pathWB+"/"+folderName).exists())
+		   		new File(pathWB+"/"+folderName).mkdir();
 	        
-		}catch (MiddlewareQueryException e) {
-			throw new GDMSException(e.getMessage());
-		}
-		
-        pathWB=opPath+"/IBWorkflowSystem/workspace/"+IBWFProjects.get(dbNameL)+"/gdms/output";
-        //System.out.println("pathWB=:"+pathWB);
-        //pathWB="C:/IBWorkflowSystem/workspace/1-TL1_Groundnut/gdms/output";
-        if(!new File(pathWB+"/"+folderName).exists())
-	   		new File(pathWB+"/"+folderName).mkdir();
-		
 		
 		//String strFilePath = fileExport.getAbsolutePath();
 		File generatedFile = new File(strFilePath + "\\" + strFileName + ".xls");
@@ -1261,7 +1270,7 @@ public class ExportFileFormats {
 							Label lGName = new Label((iColIndex), iGIDRowIndex, strData + "");
 							sheet.addCell(lGName);
 
-							//System.out.println(gid + " --- " + strMarkerName + " --- " + strData);
+							////System.out.println(gid + " --- " + strMarkerName + " --- " + strData);
 						}
 
 
@@ -1338,7 +1347,7 @@ public class ExportFileFormats {
 							Label lGName = new Label((iColIndex), iGIDRowIndex, strData + "");
 							sheet.addCell(lGName);
 
-							//System.out.println(gid + " --- " + strMarkerName + " --- " + strData);
+							////System.out.println(gid + " --- " + strMarkerName + " --- " + strData);
 						}
 
 
@@ -1357,6 +1366,9 @@ public class ExportFileFormats {
 		} catch (WriteException e) {
 			throw new GDMSException(e.getMessage());
 		}
+		
+		
+		
 		
 		
 		return generatedFile;
@@ -1387,7 +1399,7 @@ public class ExportFileFormats {
 		String strFilePath = fileExport.getAbsolutePath()+"\\"+folderName;
 		
 		if(!new File(strFilePath).exists())
-	       	new File(strFilePath).mkdir();
+	       	new File(strFilePath).mkdir();	
 		
 		//String strFilePath = fileExport.getAbsolutePath();
 		File generatedFile = new File(strFilePath + "\\" + strFileName + ".xls");
@@ -1399,11 +1411,11 @@ public class ExportFileFormats {
 		String allele2="";
 		
 		String markerId="";
-		/*System.out.println("a=:"+a);
-		System.out.println("markList:"+markList);
-		System.out.println("accList=:"+accList);*/
+		//System.out.println("a=:"+a);
+		//System.out.println("markList:"+markList);
+		//System.out.println("accList=:"+accList);
 		try{
-			//System.out.println("****************  EXPORT FORMATS CLASS  *****************");					
+			////System.out.println("****************  EXPORT FORMATS CLASS  *****************");					
 			WritableWorkbook workbook = Workbook.createWorkbook(generatedFile);
 			WritableSheet sheet = workbook.createSheet("DataSheet",0);			
 			
@@ -1413,9 +1425,9 @@ public class ExportFileFormats {
 			
 			int gid=0;
 			String gname="";
-			//System.out.println(".........parents=:"+parentsList);
-			//System.out.println(" data list=:"+a);
-			//System.out.println("markList=:"+markList);
+			////System.out.println(".........parents=:"+parentsList);
+			////System.out.println(" data list=:"+a);
+			////System.out.println("markList=:"+markList);
 			int noOfAccs=accList.size();
 			int noOfMarkers=markList.size();
 			
@@ -1449,11 +1461,11 @@ public class ExportFileFormats {
 			String[] AllelesList=null;
 			for(int a1=0;a1<a.size();a1++){
 				AllelesList=a.get(a1).toString().split("!~!");
-				//System.out.println(AllelesList[1].toString()+ "="+previousMarkerId+", ");
+				////System.out.println(AllelesList[1].toString()+ "="+previousMarkerId+", ");
 				
 				if((AllelesList[1].toString().toLowerCase()).equals(previousMarkerId.toString().toLowerCase())){
 					row++;
-					//System.out.println(AllelesList[1].toString()+ "="+previousMarkerId);
+					////System.out.println(AllelesList[1].toString()+ "="+previousMarkerId);
 				}else{
 					int totalRows=sheet.getRows();
 					for(int ss=0;ss<totalRows;ss++){
@@ -1466,18 +1478,18 @@ public class ExportFileFormats {
 				
 				MarkernameId=hmOfMIdAndMarkerName.get(Integer.parseInt(AllelesList[1]));
 				int totalcols=sheet.getColumns();
-				//System.out.println(MarkernameId);
-				//System.out.println("totalcols:"+totalcols);
+				////System.out.println(MarkernameId);
+				////System.out.println("totalcols:"+totalcols);
 				for(int ss=2;ss<totalcols;ss++){
-					//System.out.println(".......      "+sheet.getCell(ss,0).getContents()+"           .................:"+MarkernameId);
+					////System.out.println(".......      "+sheet.getCell(ss,0).getContents()+"           .................:"+MarkernameId);
 					if(sheet.getCell(ss,0).getContents().equals(MarkernameId)){
-						//System.out.println("inside if sheet");
+						////System.out.println("inside if sheet");
 						columns=ss;
 						break;
 					}
 				}	
 				String[] allele1=null;
-				//System.out.println(AllelesList[0]+"      "+AllelesList[1]+"   "+AllelesList[2]);				
+				////System.out.println(AllelesList[0]+"      "+AllelesList[1]+"   "+AllelesList[2]);				
 				if(AllelesList.length<3)
 					allele2="-";
 				else
@@ -1501,7 +1513,7 @@ public class ExportFileFormats {
 				}else{
 					allele=allele2;
 				}
-				//System.out.println(columns+","+row);
+				////System.out.println(columns+","+row);
 				l=new Label(columns,row,allele+"");
 				sheet.addCell(l);
 				columns++;
@@ -1522,21 +1534,22 @@ public class ExportFileFormats {
 			throw new GDMSException(e.getMessage());
 		}
 		
-		try{
+		/*try{
 			bPath="C:\\IBWorkflowSystem\\infrastructure\\tomcat\\webapps\\GDMS";
 		    opPath=bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1);
 		       
-		        //System.out.println(",,,,,,,,,,,,,  :"+bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1));
+		        ////System.out.println(",,,,,,,,,,,,,  :"+bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1));
 		   
 			dbNameL=GDMSModel.getGDMSModel().getLocalParams().getDbName();
 			IBWFProjects= new HashMap<Object, String>();
 	        List<Project> projects = workbenchDataManager.getProjects();
 	        Long projectId = Long.valueOf(0);
-	        //System.out.println("testGetProjects(): ");
+	        ////System.out.println("testGetProjects(): ");
 	        for (Project project : projects) {
-	            //System.out.println("  " + project.getLocalDbName());
+	            ////System.out.println("  " + project.getLocalDbName());
 	            projectId = project.getProjectId();
-	            IBWFProjects.put(project.getLocalDbName(),project.getProjectId()+"-"+project.getProjectName());
+	            //IBWFProjects.put(project.getLocalDbName(),project.getProjectId()+"-"+project.getProjectName());
+	            IBWFProjects.put(project.getLocalDbName(),project.getProjectId().toString());
 	        }
 	        //System.out.println(".........:"+IBWFProjects.get(dbNameL));
 	        
@@ -1549,7 +1562,13 @@ public class ExportFileFormats {
         //pathWB="C:/IBWorkflowSystem/workspace/1-TL1_Groundnut/gdms/output";
         if(!new File(pathWB+"/"+folderName).exists())
 	   		new File(pathWB+"/"+folderName).mkdir();
-		
+		*/
+		 pathWB=instDir+"/workspace/"+currWorkingProject+"/gdms/output";
+	        //System.out.println("pathWB=:"+pathWB);
+	        //pathWB="C:/IBWorkflowSystem/workspace/1-TL1_Groundnut/gdms/output";
+	        if(!new File(pathWB+"/"+folderName).exists())
+		   		new File(pathWB+"/"+folderName).mkdir();
+	        
 		
      
       		File generatedFileIBWS = new File(pathWB+"/"+folderName + "\\" + strFileName + ".xls");
@@ -1563,7 +1582,7 @@ public class ExportFileFormats {
       		markerId="";
       		
       		try{
-      			//System.out.println("****************  EXPORT FORMATS CLASS  *****************");					
+      			////System.out.println("****************  EXPORT FORMATS CLASS  *****************");					
       			WritableWorkbook workbook = Workbook.createWorkbook(generatedFileIBWS);
       			WritableSheet sheet = workbook.createSheet("DataSheet",0);			
       			
@@ -1573,9 +1592,9 @@ public class ExportFileFormats {
       			
       			int gid=0;
       			String gname="";
-      			//System.out.println(".........parents=:"+parentsList);
-      			//System.out.println(" data list=:"+a);
-      			//System.out.println("markList=:"+markList);
+      			////System.out.println(".........parents=:"+parentsList);
+      			////System.out.println(" data list=:"+a);
+      			////System.out.println("markList=:"+markList);
       			int noOfAccs=accList.size();
       			int noOfMarkers=markList.size();
       			
@@ -1609,11 +1628,11 @@ public class ExportFileFormats {
       			String[] AllelesList=null;
       			for(int a1=0;a1<a.size();a1++){
       				AllelesList=a.get(a1).toString().split("!~!");
-      				//System.out.println(AllelesList[1].toString()+ "="+previousMarkerId+", ");
+      				////System.out.println(AllelesList[1].toString()+ "="+previousMarkerId+", ");
       				
       				if((AllelesList[1].toString().toLowerCase()).equals(previousMarkerId.toString().toLowerCase())){
       					row++;
-      					//System.out.println(AllelesList[1].toString()+ "="+previousMarkerId);
+      					////System.out.println(AllelesList[1].toString()+ "="+previousMarkerId);
       				}else{
       					int totalRows=sheet.getRows();
       					for(int ss=0;ss<totalRows;ss++){
@@ -1626,18 +1645,18 @@ public class ExportFileFormats {
       				
       				MarkernameId=hmOfMIdAndMarkerName.get(Integer.parseInt(AllelesList[1]));
       				int totalcols=sheet.getColumns();
-      				//System.out.println(MarkernameId);
-      				//System.out.println("totalcols:"+totalcols);
+      				////System.out.println(MarkernameId);
+      				////System.out.println("totalcols:"+totalcols);
       				for(int ss=2;ss<totalcols;ss++){
-      					//System.out.println(".......      "+sheet.getCell(ss,0).getContents()+"           .................:"+MarkernameId);
+      					////System.out.println(".......      "+sheet.getCell(ss,0).getContents()+"           .................:"+MarkernameId);
       					if(sheet.getCell(ss,0).getContents().equals(MarkernameId)){
-      						//System.out.println("inside if sheet");
+      						////System.out.println("inside if sheet");
       						columns=ss;
       						break;
       					}
       				}	
       				String[] allele1=null;
-      				//System.out.println(AllelesList[0]+"      "+AllelesList[1]+"   "+AllelesList[2]);				
+      				////System.out.println(AllelesList[0]+"      "+AllelesList[1]+"   "+AllelesList[2]);				
       				if(AllelesList.length<3)
       					allele2="-";
       				else
@@ -1661,7 +1680,7 @@ public class ExportFileFormats {
       				}else{
       					allele=allele2;
       				}
-      				//System.out.println(columns+","+row);
+      				////System.out.println(columns+","+row);
       				l=new Label(columns,row,allele+"");
       				sheet.addCell(l);
       				columns++;
@@ -1683,6 +1702,8 @@ public class ExportFileFormats {
       		}
       		
 		
+		
+		
 		return generatedFile;
 	}
 	/*public String MarkerNameIdList(ArrayList markList){		
@@ -1690,7 +1711,7 @@ public class ExportFileFormats {
 		for(int i=0;i<markList.size();i++){
 			MarkerIdNameList=MarkerIdNameList+markList.get(i)+"!&&!";
 		}
-		//System.out.println("MarkerIdNameList=:"+MarkerIdNameList);
+		////System.out.println("MarkerIdNameList=:"+MarkerIdNameList);
 		return MarkerIdNameList;
 	}*/
 
@@ -1724,7 +1745,7 @@ public class ExportFileFormats {
 		String folderName="K-bioOrderForms";		
 		WebApplicationContext ctx = (WebApplicationContext) _mainHomePage.getContext();
         String strTemplateFolderPath = ctx.getHttpSession().getServletContext().getRealPath("\\VAADIN\\themes\\gdmstheme\\Templates");
-        //System.out.println("Folder-Path: " + strTemplateFolderPath);
+        ////System.out.println("Folder-Path: " + strTemplateFolderPath);
 		
       //String strMarkerType = _strMarkerType.replace(" ", "");
 		String strSrcFileName = strTemplateFolderPath+"\\snp_template.xls";
@@ -1745,45 +1766,28 @@ public class ExportFileFormats {
 		}
 		
 		String strFilePath = fileExport.getAbsolutePath()+"\\"+folderName;
-		bPath="C:\\IBWorkflowSystem\\infrastructure\\tomcat\\webapps\\GDMS";
+		/*bPath="C:\\IBWorkflowSystem\\infrastructure\\tomcat\\webapps\\GDMS";
 	    opPath=bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1);
-	    
+	     */
 		if(!new File(strFilePath).exists())
 	       	new File(strFilePath).mkdir();
 		
-		//System.out.println("strFilePath=:"+strFilePath);
+		////System.out.println("strFilePath=:"+strFilePath);
 		
 		String destFileWF=strFilePath+"/KBio"+String.valueOf(time)+".xls";
 		File generatedFile = new File(destFileWF);
 		
 		
-		 try{
-			 dbNameL=GDMSModel.getGDMSModel().getLocalParams().getDbName();
-			IBWFProjects= new HashMap<Object, String>();
-	        List<Project> projects = workbenchDataManager.getProjects();
-	        Long projectId = Long.valueOf(0);
-	        //System.out.println("testGetProjects(): ");
-	        for (Project project : projects) {
-	            //System.out.println("  " + project.getLocalDbName());
-	            projectId = project.getProjectId();
-	            IBWFProjects.put(project.getLocalDbName(),project.getProjectId()+"-"+project.getProjectName());
-	        }
-	        //System.out.println(".........:"+IBWFProjects.get(dbNameL));
-		        
-			}catch (MiddlewareQueryException e) {
-				//throw new GDMSException(e.getMessage());
-			}
-			
-	        pathWB=opPath+"/IBWorkflowSystem/workspace/"+IBWFProjects.get(dbNameL)+"/gdms/output";
+		 pathWB=instDir+"/workspace/"+currWorkingProject+"/gdms/output";
 	        //System.out.println("pathWB=:"+pathWB);
 	        //pathWB="C:/IBWorkflowSystem/workspace/1-TL1_Groundnut/gdms/output";
 	        if(!new File(pathWB+"/"+folderName).exists())
 		   		new File(pathWB+"/"+folderName).mkdir();
+	        
 			
 	        String strFilePathIBWS=pathWB+"/"+folderName;
 	        String destFileIBWFS=strFilePathIBWS+"/KBio"+String.valueOf(time)+".xls";
 			File generatedFileWF = new File(destFileIBWFS);
-	        
 		
 		try{
 		
@@ -1793,7 +1797,7 @@ public class ExportFileFormats {
 			InputStream oInStream = new FileInputStream(strSrcFileName);
 	        OutputStream oOutStream = new FileOutputStream(destFileWF);
 	
-			OutputStream oOutStreamWF = new FileOutputStream(destFileIBWFS);	
+	        OutputStream oOutStreamWF = new FileOutputStream(destFileIBWFS);
 	        
 	        // Transfer bytes from in to out
 	        byte[] oBytes = new byte[1024];
@@ -1834,9 +1838,11 @@ public class ExportFileFormats {
 	        outFile.close();
 	        
 	        
+	        
+	        
 	       
 	        
-	        FileInputStream fileIBWS = new FileInputStream(generatedFileWF);
+	        FileInputStream fileIBWS = new FileInputStream(destFileWF);
 	        
 	        HSSFWorkbook workbookIBWS = new HSSFWorkbook(fileIBWS);
 	        HSSFSheet sheetIBWS = workbookIBWS.getSheetAt(1);
@@ -1851,7 +1857,8 @@ public class ExportFileFormats {
 	             cellIBWS = rowIBWS.getCell(0);
 	             if (cellIBWS == null)
 		    		 cellIBWS = rowIBWS.createCell(0);
-	             cellIBWS.setCellValue(cellIBWS.getStringCellValue()+markersList.get(m1).toString());
+	             if(cellIBWS.getStringCellValue()==null)
+	            	 cellIBWS.setCellValue(cellIBWS.getStringCellValue()+markersList.get(m1).toString());
 		
 		    	 rowNumIBWS++;
 		     }
@@ -1859,8 +1866,10 @@ public class ExportFileFormats {
 	        fileIBWS.close();
 	         
 	        FileOutputStream outFileIWBS =new FileOutputStream(destFileIBWFS);
-	        workbookIBWS.write(outFile);
-	        outFile.close();
+	        workbookIBWS.write(outFileIWBS);
+	        outFileIWBS.close();
+	        
+	        
 	        
 		}catch(Exception e){
 			e.printStackTrace();

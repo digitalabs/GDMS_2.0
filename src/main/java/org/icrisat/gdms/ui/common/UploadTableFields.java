@@ -170,7 +170,7 @@ public interface UploadTableFields {
 			new FieldProperties(UploadField.Genotype.toString(), UploadField.REQUIRED.toString(), "", "")};
 	
 	//20131209: Tulasi --- Added fields required for KBio Science Genotype upload
-	public FieldProperties[] KBioSNPGenotype_Source = {
+	public FieldProperties[] LGCGenomicsSNPGenotype_Source = {
 			new FieldProperties(UploadField.SNo.toString(), "", "1", "4"),
 			new FieldProperties(UploadField.KBioSciencesGridReport.toString(), UploadField.REQUIRED.toString(), "", ""),
 			new FieldProperties(UploadField.GridVersion.toString(), "", "", ""),
@@ -179,7 +179,7 @@ public interface UploadTableFields {
 			new FieldProperties(UploadField.Plates.toString(), "", "", "")};
 
 
-	public FieldProperties[] KBioSNPGenotype_Data = {
+	public FieldProperties[] LGCGenomicsSNPGenotype_Data = {
 			new FieldProperties(UploadField.SNo.toString(), "", "1", "4"),
 			new FieldProperties(UploadField.DNA.toString(), UploadField.REQUIRED.toString(), "", ""),	
 			//new FieldProperties(UploadField.Assay.toString(), UploadField.REQUIRED.toString(), "", "")
@@ -251,7 +251,7 @@ public interface UploadTableFields {
 			new FieldProperties(UploadField.Genus.toString(), UploadField.REQUIRED.toString(), "", ""),
 			new FieldProperties(UploadField.Method.toString(), UploadField.REQUIRED.toString(), "", ""),
 			new FieldProperties(UploadField.Score.toString(), UploadField.REQUIRED.toString(), "", ""),
-			
+
 			new FieldProperties(UploadField.Species.toString(), "", "", ""),
 			new FieldProperties(UploadField.Remark.toString(), "", "", "")};		
 

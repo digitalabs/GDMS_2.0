@@ -23,7 +23,7 @@ public class RetrieveMarker {
 		LinkedList<Marker> listOfNewMarkers = new LinkedList<Marker>();
 		
 		MarkerDAO markerDAO = new MarkerDAO();
-		markerDAO.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		markerDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
 		
 		try {
 			
@@ -52,7 +52,7 @@ public class RetrieveMarker {
 		LinkedList<MarkerUserInfo> listOfMarkerUserInfo = new LinkedList<MarkerUserInfo>();
 		
 		MarkerUserInfoDAO markerUserInfoDAO = new MarkerUserInfoDAO();
-		markerUserInfoDAO.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		markerUserInfoDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
 		
 		try {
 			
@@ -76,7 +76,7 @@ public class RetrieveMarker {
 		LinkedList<MarkerDetails> listOfMarkerDetails = new LinkedList<MarkerDetails>();
 		
 		MarkerDetailsDAO markerDetailsDAO = new MarkerDetailsDAO();
-		markerDetailsDAO.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		markerDetailsDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
 		
 		try {
 			
@@ -98,7 +98,7 @@ public class RetrieveMarker {
 	public List<String> retrieveAllMarkerTypes() throws GDMSException {
 		
 		MarkerDAO markerDAO = new MarkerDAO();
-		markerDAO.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		markerDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
 		
 		List<String> listOfAllMarkerTypes;
 		
@@ -119,7 +119,7 @@ public class RetrieveMarker {
 	public List<String> retrieveAllDBAccessionIDs() throws GDMSException {
 		
 		MarkerDAO markerDAO = new MarkerDAO();
-		markerDAO.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		markerDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
 		
 		List<String> listOfAllDBAccessionIDs;
 		
@@ -152,7 +152,11 @@ public class RetrieveMarker {
 
 	private List<Marker> getLocalMarkers() throws MiddlewareQueryException {
 		MarkerDAO markerDAO = new MarkerDAO();
-		markerDAO.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		try{
+			markerDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
+		} catch (GDMSException e) {
+			e.printStackTrace();
+		}
 		List<Marker> all = markerDAO.getAll();
 		return all;
 	}
@@ -160,7 +164,11 @@ public class RetrieveMarker {
 
 	private List<Marker> getCentralMarkers() throws MiddlewareQueryException {
 		MarkerDAO markerDAO = new MarkerDAO();
-		markerDAO.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession());
+		try{
+			markerDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession());
+		} catch (GDMSException e) {
+			e.printStackTrace();
+		}
 		List<Marker> all = markerDAO.getAll();
 		return all;
 	}

@@ -12,9 +12,12 @@ import jxl.Sheet;
 import jxl.Workbook;
 import jxl.read.biff.BiffException;
 
+import org.generationcp.middleware.dao.NameDAO;
 import org.generationcp.middleware.dao.UserDAO;
+import org.generationcp.middleware.dao.gdms.MarkerDAO;
 import org.generationcp.middleware.exceptions.MiddlewareQueryException;
 import org.generationcp.middleware.hibernate.HibernateSessionProvider;
+import org.generationcp.middleware.manager.Database;
 import org.generationcp.middleware.manager.GenotypicDataManagerImpl;
 import org.generationcp.middleware.manager.GetGermplasmByNameModes;
 import org.generationcp.middleware.manager.ManagerFactory;
@@ -31,15 +34,18 @@ import org.generationcp.middleware.pojos.gdms.AlleleValues;
 import org.generationcp.middleware.pojos.gdms.DartDataRow;
 import org.generationcp.middleware.pojos.gdms.DartValues;
 import org.generationcp.middleware.pojos.gdms.Dataset;
+import org.generationcp.middleware.pojos.gdms.DatasetElement;
 import org.generationcp.middleware.pojos.gdms.DatasetUsers;
 import org.generationcp.middleware.pojos.gdms.Marker;
 import org.generationcp.middleware.pojos.gdms.MarkerMetadataSet;
+import org.generationcp.middleware.pojos.gdms.SNPDataRow;
 import org.generationcp.middleware.pojos.workbench.WorkbenchRuntimeData;
 import org.icrisat.gdms.common.GDMSException;
 import org.icrisat.gdms.ui.FieldProperties;
 import org.icrisat.gdms.ui.common.GDMSModel;
 import org.icrisat.gdms.upload.UploadMarker;
 import org.icrisat.gdms.upload.marker.UploadField;
+
 
 
 public class DARTGenotype implements UploadMarker {
@@ -62,7 +68,6 @@ public class DARTGenotype implements UploadMarker {
 	private Marker addedMarker;
 	private DartValues dartValues;
 	private Marker[] arrayOfMarkers;
-	
 	List<DartDataRow> listOfDArTDataRows; 
 	ManagerFactory factory =null;
 	String alertGN="no";
@@ -75,8 +80,12 @@ public class DARTGenotype implements UploadMarker {
     
     String strErrMsg="";
     
-	static Map<String, ArrayList<Integer>> hashMap = new HashMap<String,  ArrayList<Integer>>();
-
+    GermplasmDataManager germManager;		
+	GenotypicDataManager genoManager;
+	
+    
+	static Map<String, ArrayList<Integer>> hashMap = new HashMap<String,  ArrayList<Integer>>();  
+	
 	@Override
 	public void readExcelFile() throws GDMSException {
 		try {
@@ -333,19 +342,23 @@ public class DARTGenotype implements UploadMarker {
 		 * 20130826: Fix for Issue No: 60 - DArT Genotype Upload
 		 * 
 		 * Check for duplicate Dataset Name before uploading the DArT Genotype
+		 * 
 		 */
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+		//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
 		
+		factory=GDMSModel.getGDMSModel().getManagerFactory();
 		//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%  :"+GDMSModel.getGDMSModel().getLocalParams().);
-		GermplasmDataManager germManager = factory.getGermplasmDataManager();		
-		GenotypicDataManager genoManager=factory.getGenotypicDataManager();
+		germManager = factory.getGermplasmDataManager();		
+		genoManager=factory.getGenotypicDataManager();
 		
+	
 			if(strDatasetName.trim().length() > 30){
 				throw new GDMSException("Dataset Name value exceeds max char size.");
 			}
+
 			
 			
-		
+	
 		//20130826: End of fix for Issue No: 60 - DArT Genotype Upload
 
 		String strReqColumnNamesInDataSheet[] = {UploadField.CloneID.toString(), UploadField.MarkerName.toString(),  UploadField.Q.toString(), 
@@ -431,26 +444,27 @@ public class DARTGenotype implements UploadMarker {
 
 
 		//Retrieving data from Names table using GIDs list
-		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
+		/*GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
 		HibernateSessionProvider hibernateSessionProviderForLocal = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal();
 		genotypicDataManagerImpl.setSessionProviderForLocal(hibernateSessionProviderForLocal);
 		genotypicDataManagerImpl.setSessionProviderForCentral(null);
-
-		
+		*/
+		/*
 		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
 		
 		//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%  :"+GDMSModel.getGDMSModel().getLocalParams().);
 		GermplasmDataManager germManager = factory.getGermplasmDataManager();		
 		GenotypicDataManager genoManager=factory.getGenotypicDataManager();
 		
-		
+		*/
+
 		List<Integer> listOfGermplasmIDsFromDB = new ArrayList<Integer>();
 		List<Integer> listOfNIDsByGermplasmIds = null;
 		ArrayList<String> listOfGermplasmNamesFromDB = null;
 		HashMap<Integer, String> hashMapOfGIDandGNameFromDB = null;
 		HashMap<Integer, Integer> hashMapOfGIDsandNIDsFromDB = null;
 		HashMap<String, Integer> hashMapOfGNamesandGIDsFromDB = null;
-//System.out.println("listofGIDsFromGIDsTable=:"+listofGIDsFromGIDsTable);
+		//System.out.println("listofGIDsFromGIDsTable=:"+listofGIDsFromGIDsTable);
 		ArrayList gidsDBList = new ArrayList();
 		ArrayList gNamesDBList = new ArrayList();
 		try {
@@ -518,8 +532,6 @@ public class DARTGenotype implements UploadMarker {
         	strErrMsg = "The following Germplasm(s) provided do not exist in the database. \n Please upload the relevant germplasm information through the Fieldbook \n \t"+notMatchingGIDS+" \n Please verify the name(s) provided "+notMatchingData+" which do not match the GIDS(s) present in the database "+notMatchingDataDB;
      	  throw new GDMSException(strErrMsg); 
         }		
-
-
 		/** Obtaining the list of Markers from the sheet */	
 		List<String> listOfMarkerNamesFromTheDataSheet = new ArrayList<String>();
 		for (int iRowCount = 0; iRowCount < iRowCountInDataTable; iRowCount++){
@@ -536,6 +548,9 @@ public class DARTGenotype implements UploadMarker {
 		List<Marker> listOfMarkersFromDB = null;
 		try {
 			countAll = markerDAO.countAll();
+			List<Integer> listOfMarkerIdsByMarkerNames =genoManager.getMarkerIdsByMarkerNames(listOfMarkerNamesFromTheDataSheet, 0, listOfMarkerNamesFromTheDataSheet.size(), Database.CENTRAL);
+			
+			
 			List<Integer> listOfMarkerIdsByMarkerNames = genotypicDataManagerImpl.getMarkerIdsByMarkerNames(listOfMarkerNamesFromTheDataSheet, 0, (int)countAll, Database.LOCAL);
 			if (null != listOfMarkerIdsByMarkerNames){
 				listOfMarkersFromDB = genotypicDataManagerImpl.getMarkersByMarkerIds(listOfMarkerIdsByMarkerNames, 0, listOfMarkerIdsByMarkerNames.size());
@@ -550,7 +565,7 @@ public class DARTGenotype implements UploadMarker {
 		HashMap<String, String> hashMapOfDataRowFromSourceTable = listOfDataRowsFromSourceTable.get(0);
 		String strPrincipleInvestigator = hashMapOfDataRowFromSourceTable.get(UploadField.PrincipleInvestigator.toString());
 
-		if (null == strPrincipleInvestigator || strPrincipleInvestigator.equals("")){
+		/*if (null == strPrincipleInvestigator || strPrincipleInvestigator.equals("")){
 			WorkbenchDataManagerImpl workbenchDataManagerImpl = new WorkbenchDataManagerImpl(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
 			WorkbenchRuntimeData workbenchRuntimeData;
 			try {
@@ -565,9 +580,9 @@ public class DARTGenotype implements UploadMarker {
 				throw new GDMSException(e.getMessage());
 			}
 		} else {
-
+*/
 			UserDAO userDAO = new UserDAO();
-			userDAO.setSession(hibernateSessionProviderForLocal.getSession());
+			userDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
 			List<User> listOfAllUsers =  null;
 			try {
 				listOfAllUsers = userDAO.getAll();
@@ -581,7 +596,7 @@ public class DARTGenotype implements UploadMarker {
 			} catch (MiddlewareQueryException e) {
 				throw new GDMSException(e.getMessage());
 			}
-		}
+		//}
 
 		ArrayList<String> listOfGermplasmNames = new ArrayList<String>();
 		HashMap<Integer, String> hashMapOfGIDandGName = new HashMap<Integer, String>();
@@ -761,16 +776,11 @@ public class DARTGenotype implements UploadMarker {
 	}
 
 	protected void saveDArTGenotype() throws GDMSException {
-		/*
-		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
-		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
-		genotypicDataManagerImpl.setSessionProviderForCentral(null);*/
-		
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+		//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
 		
 		//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%  :"+GDMSModel.getGDMSModel().getLocalParams().);
 			
-		GenotypicDataManager genoManager=factory.getGenotypicDataManager();
+		//GenotypicDataManager genoManager=factory.getGenotypicDataManager();
 		
 
 		try {
@@ -837,4 +847,5 @@ public class DARTGenotype implements UploadMarker {
 		hashMap.put(key,tempList);
 	}
 	
+
 }

@@ -1,25 +1,36 @@
 package org.icrisat.gdms.ui;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+
 import jxl.write.WriteException;
+
 import org.generationcp.middleware.dao.gdms.MarkerDAO;
 import org.generationcp.middleware.dao.gdms.MarkerDetailsDAO;
 import org.generationcp.middleware.dao.gdms.MarkerUserInfoDAO;
 import org.generationcp.middleware.exceptions.MiddlewareQueryException;
+import org.generationcp.middleware.manager.ManagerFactory;
+import org.generationcp.middleware.manager.api.GenotypicDataManager;
+import org.generationcp.middleware.manager.api.GermplasmDataManager;
 import org.generationcp.middleware.pojos.gdms.Marker;
 import org.generationcp.middleware.pojos.gdms.MarkerDetails;
 import org.generationcp.middleware.pojos.gdms.MarkerUserInfo;
+import org.hibernate.Hibernate;
+import org.hibernate.SQLQuery;
 import org.hibernate.Session;
 import org.icrisat.gdms.common.ExportFileFormats;
 import org.icrisat.gdms.common.GDMSException;
 import org.icrisat.gdms.retrieve.marker.RetrieveMarker;
 import org.icrisat.gdms.ui.common.GDMSModel;
+
 import com.vaadin.data.Container;
 import com.vaadin.data.Item;
 import com.vaadin.data.Property;
 import com.vaadin.data.Property.ValueChangeEvent;
+import com.vaadin.terminal.FileResource;
 import com.vaadin.terminal.ThemeResource;
 import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
@@ -90,14 +101,38 @@ public class RetrieveMarkerInformationComponent implements Component.Listener {
 
 
 	protected int iTableCounter;
+	
+	ManagerFactory factory;
+	ManagerFactory factoryD;
+	
+	GermplasmDataManager germManager;
+	GenotypicDataManager genoManager;
+	protected File orderFormForPlymorphicMarkers;
 
 	public RetrieveMarkerInformationComponent(GDMSMain theMainHomePage) throws GDMSException{
 
 		_mainHomePage = theMainHomePage;
 		
-		localSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
-		centralSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
+		try{
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			/*if(localSession==null){
+				localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionFactoryForLocal().getCurrentSession();
+			}*/
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			/*if(centralSession==null){
+				centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionFactoryForCentral().getCurrentSession();
+			}*/
+			
+			genoManager=factory.getGenotypicDataManager();
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 		
+		/*localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+		centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+		*/
 		markerDAOLocal = new MarkerDAO();
 		markerDAOLocal.setSession(localSession);
 		markerDAOCentral = new MarkerDAO();
@@ -215,56 +250,16 @@ public class RetrieveMarkerInformationComponent implements Component.Listener {
 
 					//ArrayList<String> listOfSelectionValues = new ArrayList<String>();
 					
-					if (strSelectedField.equals("Marker-Name")){
-						/*if (listOfSelectedFields.contains("Marker-Type")){
-							if (null != strMarkerType){
-								try {
-									long countAllLocal = markerDAOLocal.countAll();
-									List<String> markerNamesByMarkerTypeLocal = markerDAOLocal.getMarkerNamesByMarkerType(strMarkerType, 0, (int)countAllLocal);
-									long countAllCentral = markerDAOCentral.countAll();
-									List<String> markerNamesByMarkerTypeCentral = markerDAOCentral.getMarkerNamesByMarkerType(strMarkerType, 0, (int)countAllCentral);
-									for (String strMarkerName : markerNamesByMarkerTypeLocal){
-										listOfSelectionValues.add(strMarkerName);
-									}
-									for (String strMarkerName : markerNamesByMarkerTypeCentral){
-										listOfSelectionValues.add(strMarkerName);
-									}
-								} catch (MiddlewareQueryException e) {
-									//throw new GDMSException(e.getMessage());
-									_mainHomePage.getMainWindow().getWindow().showNotification(e.getMessage(),  Notification.TYPE_ERROR_MESSAGE);
-									return;
-								}
-							} else {
-								//throw new GDMSException("Please select Marker-Type type first.");
-								_mainHomePage.getMainWindow().getWindow().showNotification("Please select Marker-Type type first.",  Notification.TYPE_ERROR_MESSAGE);
-								return;
-							}
-
-							listOfSelectedFields.add("Marker-Name");
-						} else {
-							//throw new GDMSException("Please select Marker-Type type first.");
-							_mainHomePage.getMainWindow().getWindow().showNotification("Please select Marker-Type type first.",  Notification.TYPE_ERROR_MESSAGE);
-							return;
-						}*/
+					if (strSelectedField.equals("Marker-Name")){			
 
 						List<String> listOfAllMarkerTypes = new ArrayList<String>();
 						try {
-							long countAllMarkerTypes = markerDAOLocal.countAllMarkerTypes();
-							List<String> listOfAllMarkerTypesLocal = markerDAOLocal.getAllMarkerTypes(0, (int)countAllMarkerTypes);
-							
-							long countAllMarkerTypes2 = markerDAOCentral.countAllMarkerTypes();
-							List<String> listOfAllMarkerTypesCentral = markerDAOCentral.getAllMarkerTypes(0, (int)countAllMarkerTypes2);
-							
-							for (String strMarkerType : listOfAllMarkerTypesLocal){
-								if (false == listOfAllMarkerTypes.contains(strMarkerType)){
-									listOfAllMarkerTypes.add(strMarkerType);
-								}
+							List<String> markerTypes = genoManager.getAllMarkerTypes(0, 15);	
+							for (int m=0;m<markerTypes.size();m++){
+								if(!listOfAllMarkerTypes.contains(markerTypes.get(m)))
+									listOfAllMarkerTypes.add(markerTypes.get(m));
 							}
-							for (String strMarkerType : listOfAllMarkerTypesCentral){
-								if (false == listOfAllMarkerTypes.contains(strMarkerType)){
-									listOfAllMarkerTypes.add(strMarkerType);
-								}
-							}
+							
 
 						} catch (MiddlewareQueryException e) {
 							//throw new GDMSException(e.getMessage());
@@ -275,6 +270,17 @@ public class RetrieveMarkerInformationComponent implements Component.Listener {
 						
 						for (String strMarkerType : listOfAllMarkerTypes) {
 							try {
+								markerDAOLocal = new MarkerDAO();
+								
+								localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+								
+								centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+								
+								markerDAOLocal.setSession(localSession);
+								markerDAOCentral = new MarkerDAO();
+								markerDAOCentral.setSession(centralSession);
+							
+								
 								long countAllLocal = markerDAOLocal.countAll();
 								List<String> markerNamesByMarkerTypeLocal = markerDAOLocal.getMarkerNamesByMarkerType(strMarkerType, 0, (int)countAllLocal);
 								long countAllCentral = markerDAOCentral.countAll();
@@ -292,33 +298,35 @@ public class RetrieveMarkerInformationComponent implements Component.Listener {
 								}
 							} catch (MiddlewareQueryException e) {
 								//throw new GDMSException(e.getMessage());
-								_mainHomePage.getMainWindow().getWindow().showNotification(e.getMessage(),  Notification.TYPE_ERROR_MESSAGE);
+								//_mainHomePage.getMainWindow().getWindow().showNotification(e.getMessage(),  Notification.TYPE_ERROR_MESSAGE);
+								e.printStackTrace();
 								return;
+							}catch(Exception e){
+								e.printStackTrace();
 							}
 						}
 						
 						
 					} else if (strSelectedField.equals("Marker-Type")){
 
-						try {
-							long countAllMarkerTypes = markerDAOLocal.countAllMarkerTypes();
-							List<String> listOfAllMarkerTypesLocal = markerDAOLocal.getAllMarkerTypes(0, (int)countAllMarkerTypes);
+						try {	
 							
-							long countAllMarkerTypes2 = markerDAOCentral.countAllMarkerTypes();
-							List<String> listOfAllMarkerTypesCentral = markerDAOCentral.getAllMarkerTypes(0, (int)countAllMarkerTypes2);
 							
-							for (String strMarkerType : listOfAllMarkerTypesLocal){
-								listOfSelectionValues.add(strMarkerType);
+							
+							List<String> markerTypes = genoManager.getAllMarkerTypes(0, 15);							
+							for (int m=0;m<markerTypes.size();m++){
+								if(!listOfSelectionValues.contains(markerTypes.get(m)))
+									listOfSelectionValues.add(markerTypes.get(m));
 							}
-							for (String strMarkerType : listOfAllMarkerTypesCentral){
-								listOfSelectionValues.add(strMarkerType);
-							}
+							
 							listOfSelectedFields.add("Marker-Type");
 
 						} catch (MiddlewareQueryException e) {
 							//throw new GDMSException(e.getMessage());
 							_mainHomePage.getMainWindow().getWindow().showNotification(e.getMessage(),  Notification.TYPE_ERROR_MESSAGE);
 							return;
+						}catch(Exception e){
+							e.printStackTrace();
 						}
 
 					} else if (strSelectedField.equals("Marker-ID")){
@@ -554,9 +562,11 @@ public class RetrieveMarkerInformationComponent implements Component.Listener {
 					_tabsheetForMarkers.setSelectedTab(1);
 
 				} catch (GDMSException e) {
+					e.printStackTrace();
 					_mainHomePage.getMainWindow().getWindow().showNotification(e.getExceptionMessage(), Notification.TYPE_ERROR_MESSAGE);
 					return;
 				} catch (MiddlewareQueryException e) {
+					e.printStackTrace();
 					_mainHomePage.getMainWindow().getWindow().showNotification(e.getMessage(), Notification.TYPE_ERROR_MESSAGE);
 					return;
 				}
@@ -632,7 +642,7 @@ public class RetrieveMarkerInformationComponent implements Component.Listener {
 						resultsLayout.addComponent(new Label("There are " + size + " markers in the below table."));
 					}
 				}
-				//System.out.println("%%%%%%%%%%%%%%%%%%   :"+arrayOfTablesForMarkerResults[0]);
+				System.out.println("%%%%%%%%%%%%%%%%%%   :"+arrayOfTablesForMarkerResults[0]);
 				if (0 < size) {
 					resultsLayout.addComponent(arrayOfTablesForMarkerResults[i]);
 					resultsLayout.setComponentAlignment(arrayOfTablesForMarkerResults[i], Alignment.MIDDLE_CENTER);
@@ -650,16 +660,51 @@ public class RetrieveMarkerInformationComponent implements Component.Listener {
 						
 						layoutForExportTypes.addComponent(excelButton);
 						
-						ThemeResource themeResource1 = new ThemeResource("images/pdf.gif");
+						ThemeResource themeResource1 = new ThemeResource("images/LGC_Genomics.gif");
 						Button kbioButton = new Button();
 						kbioButton.setIcon(themeResource1);
 						kbioButton.setStyleName(Reindeer.BUTTON_LINK);
-						kbioButton.setDescription("KBio Format");
+						kbioButton.setDescription("LGC Genomics Order form");
 						layoutForExportTypes.addComponent(kbioButton);
 						kbioButton.addListener(new ClickListener() {
 							private static final long serialVersionUID = 1L;
 							public void buttonClick(ClickEvent event) {
 								ExportFileFormats exportFileFormats = new ExportFileFormats();
+								String mType="SNP";
+								ArrayList <String> markersForKBio=new ArrayList();	
+								try{
+									//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+									factory=GDMSModel.getGDMSModel().getManagerFactory();
+									/*
+									localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+									centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+									
+									//om=factory.getOntologyDataManager();
+*/									genoManager=factory.getGenotypicDataManager();
+								}catch (Exception e){
+									e.printStackTrace();
+								}
+								
+								
+								try {
+									ArrayList<String> snpMarkers=(ArrayList<String>) genoManager.getMarkerNamesByMarkerType(mType, 0, (int)genoManager.countMarkerNamesByMarkerType(mType));
+									if(!(snpMarkers.isEmpty())){
+										if(!(snpMarkers.isEmpty())){
+											File kbioOrderFormFile = exportFileFormats.exportToKBio(snpMarkers, _mainHomePage);
+											FileResource fileResource = new FileResource(kbioOrderFormFile, _mainHomePage);
+											//_mainHomePage.getMainWindow().getWindow().open(fileResource, "KBio Order Form", true);
+											_mainHomePage.getMainWindow().getWindow().open(fileResource, "_self");
+										}
+									}else{
+										_mainHomePage.getMainWindow().getWindow().showNotification("No SNP Marker(s) to create KBio Order form", Notification.TYPE_ERROR_MESSAGE);
+										return;
+									}
+									
+								} catch (Exception e) {
+									_mainHomePage.getMainWindow().getWindow().showNotification("Error generating KBioOrder Form", Notification.TYPE_ERROR_MESSAGE);
+									return;
+								}
+								
 								//exportFileFormats.exportToKBio(_markerTable, _mainHomePage);
 							}
 						});
@@ -932,6 +977,25 @@ public class RetrieveMarkerInformationComponent implements Component.Listener {
 		if (null != listOfSelectedCriteria && listOfSelectedCriteria.size() > 0){
 
 			_finalListOfMarkers = new ArrayList<Marker>();
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+			
+			markerDAOLocal = new MarkerDAO();
+			markerDAOLocal.setSession(localSession);
+			markerDAOCentral = new MarkerDAO();
+			markerDAOCentral.setSession(centralSession);
+			markerUserInfoDAOLocal = new MarkerUserInfoDAO();
+			markerUserInfoDAOLocal.setSession(localSession);
+			markerUserInfoDAOCentral = new MarkerUserInfoDAO();
+			markerUserInfoDAOCentral.setSession(centralSession);
+
+			markerDetailsDAOLocal = new MarkerDetailsDAO();
+			markerDetailsDAOLocal.setSession(localSession);
+			markerDetailsDAOCentral = new MarkerDetailsDAO();
+			markerDetailsDAOCentral.setSession(centralSession);
 			
 			List<Marker> listOfAllMarkersLocal = markerDAOLocal.getAll();
 			List<Marker> listOfAllMarkersCentral = markerDAOCentral.getAll();

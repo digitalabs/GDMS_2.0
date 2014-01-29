@@ -28,12 +28,17 @@ public class GenotypingDataRetrieval {
 	List<Dataset> resultC;
 	List<Dataset> resultL;
 	public GenotypingDataRetrieval() {
-		localSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
-		centralSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
-		
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		manager = factory.getGermplasmDataManager();
-		genoManager=factory.getGenotypicDataManager();
+		try{
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+			manager = factory.getGermplasmDataManager();
+			genoManager=factory.getGenotypicDataManager();
+		}catch(Exception e){
+			e.printStackTrace();
+		}
 	}
 	
 	public List<Dataset> retrieveGenotyingDataRetrieval() throws MiddlewareQueryException {
@@ -47,7 +52,7 @@ public class GenotypingDataRetrieval {
 		if(null != centralDataset) {
 			listToReturn.addAll(centralDataset);
 		}
-		//System.out.println("$$$$$$$$$$$$$$$$$$   :"+listToReturn);
+		System.out.println("$$$$$$$$$$$$$$$$$$   :"+listToReturn);
 		return listToReturn;
 	}
 
@@ -60,7 +65,7 @@ public class GenotypingDataRetrieval {
 		       	strDatasetID.add(result.getDatasetId());
 		    }
 		}	
-		//System.out.println(genoManager.getDatasetDetailsByDatasetIds(strDatasetID));
+		System.out.println(genoManager.getDatasetDetailsByDatasetIds(strDatasetID));
 		try{
 			if(strDatasetID.size()>0){
 				resultC = genoManager.getDatasetDetailsByDatasetIds(strDatasetID);
@@ -112,12 +117,12 @@ public class GenotypingDataRetrieval {
 
 	private ArrayList<String> getLocalQTLs() {
 		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
-		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
 		
 		
 		ArrayList<String> arrayListOfQTLRetrieveDataLocal = null;
 		
 		try {
+			genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal());
 			
 			long countAllQtl = genotypicDataManagerImpl.countAllQtl();
 			List<Qtl> listOfAllQtls = genotypicDataManagerImpl.getAllQtl(0, (int)countAllQtl);
@@ -156,6 +161,8 @@ public class GenotypingDataRetrieval {
 			
 		} catch (MiddlewareQueryException e) {
 			e.printStackTrace();
+		}catch(Exception e){
+			e.printStackTrace();
 		}
 		
 		return arrayListOfQTLRetrieveDataLocal;
@@ -163,11 +170,11 @@ public class GenotypingDataRetrieval {
 
 	private ArrayList<String> getCentralQTLs() {
 		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
-		genotypicDataManagerImpl.setSessionProviderForCentral(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral());
 		
 		ArrayList<String> arrayListOfQTLRetrieveDataCentral = null;
 		
 		try {
+			genotypicDataManagerImpl.setSessionProviderForCentral(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral());
 			
 			long countAllQtl = genotypicDataManagerImpl.countAllQtl();
 			List<Qtl> listOfAllQtls = genotypicDataManagerImpl.getAllQtl(0, (int)countAllQtl);
@@ -206,6 +213,8 @@ public class GenotypingDataRetrieval {
 		} catch (MiddlewareQueryException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}catch(Exception e){
+			e.printStackTrace();
 		}
 		
 		return arrayListOfQTLRetrieveDataCentral;
@@ -215,8 +224,8 @@ public class GenotypingDataRetrieval {
 	//20131210: Tulasi --- Implemented method to retrieve Dataset Size
 	public HashMap<Integer, String> retrieveDatasetSize() {
 		
-		ManagerFactory factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		GenotypicDataManager genoManager = factory.getGenotypicDataManager();
+		//ManagerFactory factory = new ManagerFactory(s());
+		//GenotypicDataManager genoManager = factory.getGenotypicDataManager();
 
 		DatasetDAO datasetDAOForLocal = new DatasetDAO();
 		datasetDAOForLocal.setSession(localSession);

@@ -134,7 +134,7 @@ public class DataDeletionRetrievalAction {
 			throws Exception {
 		ArrayList<String> gList = new ArrayList<String>();
 		try{
-			Session session = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
+			Session session = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
 			DatasetDAO datasetDAO = new DatasetDAO();
 			datasetDAO.setSession(session);
 			List<Dataset> allDataset = datasetDAO.getAll();
@@ -151,7 +151,7 @@ public class DataDeletionRetrievalAction {
 	public ArrayList<String> getCentralGenotypingDataList() throws Exception {
 		ArrayList<String> gList = new ArrayList<String>();
 		try{
-			Session session = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
+			Session session =GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
 			DatasetDAO datasetDAO = new DatasetDAO();
 			datasetDAO.setSession(session);
 			List<Dataset> allDataset = datasetDAO.getAll();
@@ -169,7 +169,7 @@ public class DataDeletionRetrievalAction {
 			throws Exception {
 		ArrayList<String> mList = new ArrayList<String>();
 		try{
-			Session session = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
+			Session session = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
 
 			MapDAO mapDAO = new MapDAO();
 			mapDAO.setSession(session);
@@ -186,7 +186,7 @@ public class DataDeletionRetrievalAction {
 	public ArrayList<String> getCentralMapsList() throws Exception {
 		ArrayList<String> mList = new ArrayList<String>();
 		try{
-			Session session = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
+			Session session =GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
 
 			MapDAO mapDAO = new MapDAO();
 			mapDAO.setSession(session);
@@ -204,7 +204,7 @@ public class DataDeletionRetrievalAction {
 	public ArrayList<String> getQTLInfoList() throws Exception {
 		ArrayList<String> qList = new ArrayList<String>();
 		try {
-			Session session = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
+			Session session = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
 			DatasetDAO datasetDAO = new DatasetDAO();
 			datasetDAO.setSession(session);
 			List<Dataset> allDataset = datasetDAO.getAll();
@@ -224,7 +224,7 @@ public class DataDeletionRetrievalAction {
 	public ArrayList<String> getCentralQTLInfoList() throws Exception {
 		ArrayList<String> qList = new ArrayList<String>();
 		try {
-			Session session = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
+			Session session = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
 			DatasetDAO datasetDAO = new DatasetDAO();
 			datasetDAO.setSession(session);
 			List<Dataset> allDataset = datasetDAO.getAll();

@@ -6,10 +6,10 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Properties;
 
-import org.generationcp.middleware.exceptions.ConfigException;
 import org.generationcp.middleware.hibernate.HibernateSessionProvider;
 import org.generationcp.middleware.manager.DatabaseConnectionParameters;
 import org.generationcp.middleware.manager.ManagerFactory;
+import org.generationcp.middleware.manager.api.WorkbenchDataManager;
 import org.generationcp.middleware.pojos.User;
 import org.icrisat.gdms.common.GDMSException;
 
@@ -24,6 +24,11 @@ public class GDMSModel {
 	private User loggedInUser;
 	private DatabaseConnectionParameters localParams;
 	private ManagerFactory factory;
+	private ManagerFactory factoryD;
+	
+	
+	private WorkbenchDataManager workbenchManager;
+
 	private DatabaseConnectionParameters centralParams;
 	private DatabaseConnectionParameters workbenchParams;
 	private String strMapSelected;
@@ -40,7 +45,7 @@ public class GDMSModel {
 		try{			
 		
 			initManagerFactoryForUploadingMarker();
-		}catch (ConfigException e) {
+		}catch (Exception e) {
 			e.printStackTrace();
 			//_mainHomePage.getMainWindow().getWindow().showNotification(e.getMessage(),  Notification.TYPE_ERROR_MESSAGE);
 			//return null;
@@ -124,15 +129,38 @@ public class GDMSModel {
 	}
 	
 	private void initManagerFactoryForUploadingMarker(){
-		factory = new ManagerFactory(localParams, centralParams);
+		factoryD = new ManagerFactory(localParams, centralParams);
 	}
 	
+public void setWorkbenchDataManager(WorkbenchDataManager workbenchDataManager){
+	workbenchManager=workbenchDataManager;
+}
+public WorkbenchDataManager getWorkbenchDataManager(){
+	return workbenchManager;
+}
+
+	public void setManagerFactory(ManagerFactory theManagerFactoryForRequest) {
+		factory = theManagerFactoryForRequest;
+		
+	}
+	
+	public ManagerFactory getManagerFactory() throws GDMSException {
+		
+		if (null == factory) {
+			throw new GDMSException("Database connection got closed. Please try again.");
+		}
+		
+		return factory;
+	}
+	
+	
+
 	public HibernateSessionProvider getHibernateSessionProviderForLocal(){
-		return factory.getSessionProviderForLocal();
+		return factoryD.getSessionProviderForLocal();
 	}
 	
 	public HibernateSessionProvider getHibernateSessionProviderForCentral(){
-		return factory.getSessionProviderForCentral();
+		return factoryD.getSessionProviderForCentral();
 	}
 	
 	public DatabaseConnectionParameters getLocalParams(){
@@ -201,5 +229,6 @@ public class GDMSModel {
 	public String getGermplasmSelected() {
 		return strGermplasmSelected;
 	}
+
 
 }

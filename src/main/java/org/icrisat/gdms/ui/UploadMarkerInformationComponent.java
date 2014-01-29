@@ -27,6 +27,9 @@ import org.generationcp.middleware.manager.api.GermplasmListManager;
 import org.generationcp.middleware.pojos.GermplasmList;
 import org.generationcp.middleware.pojos.gdms.Dataset;
 import org.generationcp.middleware.pojos.gdms.Map;
+import org.hibernate.Hibernate;
+import org.hibernate.Query;
+import org.hibernate.SQLQuery;
 import org.hibernate.Session;
 import org.icrisat.gdms.common.GDMSException;
 import org.icrisat.gdms.ui.common.FileDownloadResource;
@@ -37,7 +40,8 @@ import org.icrisat.gdms.ui.common.UploadVariableFieldsListener;
 import org.icrisat.gdms.upload.UploadMarker;
 import org.icrisat.gdms.upload.genotyping.DARTGenotype;
 import org.icrisat.gdms.upload.genotyping.KBioScienceGenotype;
-import org.icrisat.gdms.upload.genotyping.MappingGenotype;
+import org.icrisat.gdms.upload.genotyping.MappingABH;
+import org.icrisat.gdms.upload.genotyping.MappingAllelic;
 import org.icrisat.gdms.upload.genotyping.SNPGenotype;
 import org.icrisat.gdms.upload.genotyping.SSRGenotype;
 import org.icrisat.gdms.upload.maporqtl.MTAUpload;
@@ -123,30 +127,40 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 	private Session localSession;
 	private Session centralSession;
 	private TextField txtFieldForDatasetName;
-
+	private Session sessionL;
+	private Session sessionC;
 	private ComboBox comboBoxForGermplasm;
 	ManagerFactory factory =null;
 	
 	GermplasmListManager list;
 	GermplasmDataManager germManager;
 	GenotypicDataManager genoManager;
-
+	
 	public UploadMarkerInformationComponent(GDMSMain theMainHomePage, String theMarkerType){
 		_gdmsModel = GDMSModel.getGDMSModel();
 		_mainHomePage = theMainHomePage;
 		_strMarkerType = theMarkerType;
 		
-		//_mainHomePage = theMainHomePage;
-		localSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
-		centralSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
-		
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		list = factory.getGermplasmListManager();
-		//germManager=factory.getGermplasmDataManager();
-		genoManager=factory.getGenotypicDataManager();
-		createMarkerToBeUploaded();
+		try{
+			//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+			//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+			list = factory.getGermplasmListManager();
+			//germManager=factory.getGermplasmDataManager();
+			genoManager=factory.getGenotypicDataManager();
+			//System.out.println("777777777777777777777  :"+GDMSModel.getGDMSModel().getWorkbenchDataManager().getWorkbenchSetting().getInstallationDirectory());
+			//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%   :"+GDMSModel.getGDMSModel().getWorkbenchDataManager().getWorkbenchRuntimeData().getUserId());
+			//System.out.println(",,,,,,,,,,,,,,,  :"+GDMSModel.getGDMSModel().getWorkbenchDataManager().getLastOpenedProject(1);
+			createMarkerToBeUploaded();
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 	}
-
+	
 	public VerticalLayout buildTableComponentForMarkerTemplate() throws GDMSException {
 
 		getMarkerFields();
@@ -739,6 +753,7 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
                 
 				String strMarkerType = _strMarkerType.replace(" ", "");
 				String strFileName = "";
+				System.out.println("strMarkerType=:"+strMarkerType);
 				if (strMarkerType.equals("SSRMarker")){
 					strFileName = "SSR_Marker.xls";
 				} else if (strMarkerType.equals("SNPMarker")){
@@ -751,7 +766,7 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 					strFileName = "SSR_GenotypingTemplate.xls";
 				} else if (strMarkerType.equals("SNPGenotype") || strMarkerType.equals("GenericSNP")){
 					strFileName = "SNPGenotypingTemplate.txt";
-				} else if (strMarkerType.equals("KBioScienceSNP")){
+				} else if (strMarkerType.equals("LGCGenomicsSNP")){
 					strFileName = ""; //TODO: Tulasi --- Have to check with Kalyani
 				} else if (strMarkerType.equals("DArtGenotype")){
 					strFileName = "DArTGenotypingTemplate.xls";
@@ -871,7 +886,7 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 		comboBoxForDataset.setValue(itemId1);
 		comboBoxForDataset.setNullSelectionAllowed(false);
 		comboBoxForDataset.setImmediate(true);
-		//20131209: Tulasi --- Added condition to retrive Datasets for Map and KBio Science SNP uploads only
+		//20131209: Tulasi --- Added condition to retrive Datasets for Map and LGC Genomics SNP uploads only
 				if (_strMarkerType.equalsIgnoreCase("Map")) {
 					final List<Dataset> listOfDatasets = retrieveAllDatasets();
 					if (null != listOfDatasets){
@@ -927,11 +942,11 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 		comboBoxForGermplasm.setNullSelectionAllowed(false);
 		comboBoxForGermplasm.setImmediate(true);
 		
-		if (_strMarkerType.equalsIgnoreCase("KBio Science SNP")) {
-			final List<String> listOfGermplasms = retrieveAllGermplasms();
+		if (_strMarkerType.equalsIgnoreCase("LGC Genomics SNP")) {
+			final ArrayList<String> listOfGermplasms = retrieveAllGermplasms();
 			if (null != listOfGermplasms){
 				for (int i = 0; i < listOfGermplasms.size(); i++){
-					String strGermplasmName = listOfGermplasms.get(i);
+					String strGermplasmName = listOfGermplasms.get(i).toString();
 					comboBoxForGermplasm.addItem(strGermplasmName);
 				}
 			}
@@ -946,7 +961,7 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 			topHorizontalLayout.addComponent(comboBoxForMap);
 		} else if (_strMarkerType.equalsIgnoreCase("Map")) {
 			topHorizontalLayout.addComponent(comboBoxForDataset);
-		} else if (_strMarkerType.equalsIgnoreCase("KBio Science SNP")) {
+		} else if (_strMarkerType.equalsIgnoreCase("LGC Genomics SNP")) {
 			txtFieldForDatasetName.setRequired(true);
 			//topHorizontalLayout.addComponent(lblForDatasetName);
 			topHorizontalLayout.addComponent(txtFieldForDatasetName);
@@ -960,7 +975,7 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 		verticalLayout.addComponent(lblSelectedType);
 		verticalLayout.setComponentAlignment(lblSelectedType, Alignment.TOP_CENTER);
 		if (_strMarkerType.equalsIgnoreCase("Allelic Data") || _strMarkerType.equalsIgnoreCase("ABH Data") || 
-				_strMarkerType.equalsIgnoreCase("Map") || _strMarkerType.equalsIgnoreCase("KBio Science SNP")) {
+				_strMarkerType.equalsIgnoreCase("Map") || _strMarkerType.equalsIgnoreCase("LGC Genomics SNP")) {
 			verticalLayout.addComponent(topHorizontalLayout);
 		}
 		//20131106: Added code to display list of Maps for ABH Data type and to display list of Datasets for Map uploads
@@ -971,11 +986,47 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 
 		return verticalLayout;
 	}
-	private List<String> retrieveAllGermplasms() {
+	private ArrayList<String> retrieveAllGermplasms() {
+		String strQuerry="select distinct listname from listnms where listtype='LST'";
+		ArrayList<String> listOfGermplasmLists = new ArrayList<String>();
+		
+		List newListL=new ArrayList();
+		List newListC=new ArrayList();
+		//try {	
+		Object obj=null;
+		Object objL=null;
+		Iterator itListC=null;
+		Iterator itListL=null;
+		
+		
+		listOfGermplasmLists.clear();
+		
+		sessionC=centralSession.getSessionFactory().openSession();			
+		SQLQuery queryC=sessionC.createSQLQuery(strQuerry);		
+		queryC.addScalar("listname",Hibernate.STRING);	
+		newListC=queryC.list();			
+		itListC=newListC.iterator();			
+		while(itListC.hasNext()){
+			obj=itListC.next();
+			if(obj!=null)				
+				listOfGermplasmLists.add(obj.toString());	
+		}
+				
 
-		ArrayList<String> listOfGermplasmNames = new ArrayList<String>();
-		//ArrayList listOfGermplasmNames=new ArrayList();
-		try {	
+		sessionL=localSession.getSessionFactory().openSession();			
+		SQLQuery queryL=sessionL.createSQLQuery(strQuerry);		
+		queryL.addScalar("listname",Hibernate.STRING);	        
+		newListL=queryL.list();
+		itListL=newListL.iterator();			
+		while(itListL.hasNext()){
+			objL=itListL.next();
+			if(objL!=null)				
+				listOfGermplasmLists.add(objL.toString());	
+		}
+		
+			
+			/*
+			
 			System.out.println("^^^^^^^^^^^^^^^^^^^   :"+list.getGermplasmListTypes());
 			
 			System.out.println("%%%%%%%%%%%%%%%%%%%%   :"+list.getAllGermplasmLists(1, 20, Database.CENTRAL));
@@ -984,38 +1035,37 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 	        List<GermplasmList> listC = list.getAllGermplasmLists(0, countL, Database.CENTRAL);
 	        for (GermplasmList germPListC : listC) {
 	        	if(germPListC.getType().toString().equalsIgnoreCase("lst")){
-	        		listOfGermplasmNames.add(germPListC.getName().toString());	        		
+	        		newList.add(germPListC.getName().toString());	        		
 	        	}	           
 	        }	
 	        List<GermplasmList> listL = list.getAllGermplasmLists(0, countL, Database.LOCAL);
 	        for (GermplasmList germPListL : listL) {
 	        	if(germPListL.getType().toString().equalsIgnoreCase("lst")){
-	        		if(!(listOfGermplasmNames.contains(germPListL.getName().toString())))
-	        			listOfGermplasmNames.add(germPListL.getName().toString());	        		
+	        		if(!(newList.contains(germPListL.getName().toString())))
+	        			newList.add(germPListL.getName().toString());	        		
 	        	}	           
 	        }
+			*/
 			
 			
+			//System.out.println("listOfGermplasmLists="+listOfGermplasmLists);
 			
-			System.out.println("listOfGermplasmNames="+listOfGermplasmNames);
-			
-			
-		} catch (MiddlewareQueryException e) {
+		/*} catch (MiddlewareQueryException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		}*/
 		
 
-		return listOfGermplasmNames;
+		return listOfGermplasmLists;
 	}
 	
 	private List<Map> retrieveAllMaps() throws GDMSException {
 		
 		MapDAO mapDAOLocal = new MapDAO();
-		mapDAOLocal.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		mapDAOLocal.setSession(localSession);
 
 		MapDAO mapDAOCentral = new MapDAO();
-		mapDAOCentral.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession());
+		mapDAOCentral.setSession(centralSession);
 
 		List<Map> listOfAllMaps = new ArrayList<Map>();
 		try {
@@ -1049,10 +1099,10 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 	private List<Dataset> retrieveAllDatasets() throws GDMSException {
 		
 		DatasetDAO datasetDAOLocal = new DatasetDAO();
-		datasetDAOLocal.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		datasetDAOLocal.setSession(localSession);
 		
 		DatasetDAO datasetDAOCentral = new DatasetDAO();
-		datasetDAOCentral.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession());
+		datasetDAOCentral.setSession(centralSession);
 		
 		List<Dataset> listOfAllDatasets = new ArrayList<Dataset>();
 		
@@ -1100,12 +1150,14 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 			uploadMarker = new SSRGenotype();
 		} else if (strMarkerType.equals("SNPGenotype") || strMarkerType.equals("GenericSNP")){ //20131209: Tulasi: Adding condition to check for GenericSNP type too
 			uploadMarker = new SNPGenotype();
-		} else if (strMarkerType.equals("KBioScienceSNP")){ //20131209: Tulasi: Adding condition to check for KBioScienceSNP
+		} else if (strMarkerType.equals("LGCGenomicsSNP")){ //20131209: Tulasi: Adding condition to check for KBioScienceSNP
 			uploadMarker = new KBioScienceGenotype();
 		} else if (strMarkerType.equals("DArtGenotype")){
 			uploadMarker = new DARTGenotype();
-		} else if (strMarkerType.equals("AllelicData") || strMarkerType.equals("ABHData") ){
-			uploadMarker = new MappingGenotype();
+		} else if (strMarkerType.equals("AllelicData")){
+			uploadMarker = new MappingAllelic();
+		} else if ( strMarkerType.equals("ABHData")){
+			uploadMarker = new MappingABH();
 		} else if (strMarkerType.equals("QTL")){
 			uploadMarker = new QTLUpload();
 		} else if (strMarkerType.equals("Map")){
@@ -1232,7 +1284,7 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 				_mainHomePage.getMainWindow().getWindow().showNotification("Source table should not have more than one row", Notification.TYPE_ERROR_MESSAGE);
 				return;
 			}
-		} else if (strSourceSheetTitle.equalsIgnoreCase("KBioSNPGenotype_Source")){
+		} else if (strSourceSheetTitle.equalsIgnoreCase("LGCGenomicsSNPGenotype_Source")){
 			iRowCountInSourceTable = tableForSourceTemplateFields.size();
 			if (1 < iRowCountInSourceTable){
 				_mainHomePage.getMainWindow().getWindow().showNotification("Source table should not have more than one row", Notification.TYPE_ERROR_MESSAGE);
@@ -1252,7 +1304,7 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 			if (valueGermplasm instanceof Integer){
 				Integer itemId = (Integer)valueGermplasm;
 				if (itemId.equals(1)){
-					_mainHomePage.getMainWindow().getWindow().showNotification("Please select the Germplasm required for KBio Science SNP upload.", Notification.TYPE_ERROR_MESSAGE);
+					_mainHomePage.getMainWindow().getWindow().showNotification("Please select the Germplasm required for LGC Genomics SNP upload.", Notification.TYPE_ERROR_MESSAGE);
 					return;
 				} 
 			}
@@ -1369,6 +1421,8 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 					for (int j = 0; j < listOfDataColumnFields.size(); j++){
 						FieldProperties fieldProperties = listOfDataColumnFields.get(j);
 						String strFieldName = fieldProperties.getFieldName();
+						
+						
 						if (false == strFieldName.equalsIgnoreCase("SNO.")){
 							Property itemProperty = item.getItemProperty(strFieldName);
 							if (null != itemProperty.getValue()){
@@ -1426,7 +1480,7 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 				bUploadSuccessful = false;
 				
 				String strMarkerType = _strMarkerType.replace(" ", "");
-				if (strMarkerType.equals("SNPGenotype") || strMarkerType.equals("GenericSNP") || strMarkerType.equals("KBioScienceSNP")) {
+				if (strMarkerType.equals("SNPGenotype") || strMarkerType.equals("GenericSNP") || strMarkerType.equals("LGCGenomicsSNP")) {
 					
 					Window messageWindow = new Window("SNPGenotype Upload Error Message");
 					
@@ -1524,13 +1578,13 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 			listOfDataFieldProperties = UploadTableFields.SNPGenotype_Data;
 			strSourceSheetTitle = "SNPGenotype_Source";
 			strDataSheetTitle = "SNPGenotype_Data";
-		} else if (strMarkerType.equals("KBioScienceSNP")){
-			//"KBio Science SNP"
+		} else if (strMarkerType.equals("LGCGenomicsSNP")){
+			//"LGC Genomics SNP"
 			//TODO: 20131206: Tulasi --- Implementation pending - to display the data from the template in the table 
-			listOfSourceFieldProperties = UploadTableFields.KBioSNPGenotype_Source;
-			listOfDataFieldProperties = UploadTableFields.KBioSNPGenotype_Data;
-			strSourceSheetTitle = "KBioSNPGenotype_Source";
-			strDataSheetTitle = "KBioSNPGenotype_Data";
+			listOfSourceFieldProperties = UploadTableFields.LGCGenomicsSNPGenotype_Source;
+			listOfDataFieldProperties = UploadTableFields.LGCGenomicsSNPGenotype_Data;
+			strSourceSheetTitle = "LGCGenomicsSNPGenotype_Source";
+			strDataSheetTitle = "LGCGenomicsSNPGenotype_Data";
 		} else if (strMarkerType.equals("DArtGenotype")){
 			//strSourceFileName = "DArtGenotype_Source";
 			//strDataFileName = "DArtGenotype_Data";
@@ -2103,7 +2157,7 @@ public class UploadMarkerInformationComponent  implements Component.Listener {
 				
 				if (selectedTab.getCaption().equals("SNPGenotype_Data") || selectedTab.getCaption().equals("DArT_Data") ||
 						selectedTab.getCaption().equals("Mapping_DataList") || 
-						selectedTab.getCaption().equals("KBioScienceSNP") || selectedTab.getCaption().equals("GenericSNP")){
+						selectedTab.getCaption().equals("LGCGenomicsSNP") || selectedTab.getCaption().equals("GenericSNP")){
 					btnAddColumns.setVisible(true);
 					btnDeleteColumns.setVisible(true);
 				} else {

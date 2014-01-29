@@ -12,6 +12,9 @@ import jxl.read.biff.BiffException;
 import org.generationcp.middleware.dao.gdms.MarkerDAO;
 import org.generationcp.middleware.exceptions.MiddlewareQueryException;
 import org.generationcp.middleware.manager.GenotypicDataManagerImpl;
+import org.generationcp.middleware.manager.ManagerFactory;
+import org.generationcp.middleware.manager.api.GenotypicDataManager;
+import org.generationcp.middleware.manager.api.OntologyDataManager;
 import org.generationcp.middleware.pojos.gdms.Marker;
 import org.generationcp.middleware.pojos.gdms.MarkerAlias;
 import org.generationcp.middleware.pojos.gdms.MarkerDetails;
@@ -39,7 +42,13 @@ public class SSRMarker implements UploadMarker {
 	private ArrayList<HashMap<String, String>> arrayListOfAllMarkersToBeDisplayed;
 	private ArrayList<HashMap<String, String>> listOfNewMarkersToBeSavedToDB;
 	private int iCountOfExistingMarkers;
-
+	ManagerFactory factory=null;
+	
+	GenotypicDataManager genoManager;
+	
+	private Session centralSession;
+	private Session localSession;
+	
 
 	public void readExcelFile() throws GDMSException {
 		Workbook workbook;
@@ -268,7 +277,7 @@ public class SSRMarker implements UploadMarker {
 		/** 
 		 * Obtaining the list of existing Markers from the database using the MarkerDAO object 
 		 */
-		Session session = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
+		Session session = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
 		MarkerDAO markerDAO = new MarkerDAO();
 		markerDAO.setSession(session);
 		List<Marker> listOfAllExistingMarkersFromDB;
@@ -290,7 +299,7 @@ public class SSRMarker implements UploadMarker {
 		 * Checking for duplicates Marker information in Central database as well
 		 *  
 		 */
-		Session centralSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
+		Session centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
 		MarkerDAO markerDAOCentral = new MarkerDAO();
 		markerDAOCentral.setSession(centralSession);
 		try {
@@ -454,12 +463,21 @@ public class SSRMarker implements UploadMarker {
 	}
 
 	public void saveSSRMarker() throws GDMSException {
-		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
-		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
-		genotypicDataManagerImpl.setSessionProviderForCentral(null);
-
+		
+		try{
+			//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+			
+			genoManager=factory.getGenotypicDataManager();
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 		try {
-			genotypicDataManagerImpl.setSSRMarkers(marker, markerAlias, markerDetails, markerUserInfo);
+			genoManager.setSSRMarkers(marker, markerAlias, markerDetails, markerUserInfo);
 		} catch (MiddlewareQueryException e) {
 			throw new GDMSException("Error uploading SSR Marker");
 		} catch (Throwable th){

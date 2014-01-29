@@ -90,12 +90,12 @@ public class ExportFlapjackFileFormats {
 		//long time = new Date().getTime();
 		//String strFlapjackTextFile = "Flapjack" + String.valueOf(time);
 		
-		/*System.out.println("######################   listOfAllQTLDetails:"+listOfAllQTLDetails);
-		System.out.println("######################   hmOfQtlIdandName:"+hmOfQtlIdandName);
-		System.out.println("######################   strSelectedExportType=:"+strSelectedExportType);
-		System.out.println("######################   bQTLExists=:"+bQTLExists);
+		//System.out.println("######################   listOfAllQTLDetails:"+listOfAllQTLDetails);
+		//System.out.println("######################   hmOfQtlIdandName:"+hmOfQtlIdandName);
+		//System.out.println("######################   strSelectedExportType=:"+strSelectedExportType);
+		//System.out.println("######################   bQTLExists=:"+bQTLExists);
 		
-		*/
+		
 		String strFlapjackTextFile = "Flapjack";
 		File baseDirectory = theMainHomePage.getMainWindow().getApplication().getContext().getBaseDirectory();
 		File absoluteFile = baseDirectory.getAbsoluteFile();
@@ -118,16 +118,17 @@ public class ExportFlapjackFileFormats {
 		 * **/
 		try {
 			
+			/*
+			//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
 			
-			factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+			
 			OntologyDataManager ontManager=factory.getOntologyDataManager();
-			GenotypicDataManager genoManager=factory.getGenotypicDataManager();
+			*/
 			FileWriter flapjackTextWriter = new FileWriter(generatedTextFile);
 			BufferedWriter flapjackBufferedWriter = new BufferedWriter(flapjackTextWriter);
 			//getAllelicValuesByGidsAndMarkerNames
 			//genoManager.getAlle
-			
-			//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   :"+genoManager.getAllMaps(0, 4, Database.CENTRAL));
 			//			  fjackQTL.write("QTL\tChromosome\tPosition\tMinimum\tMaximum\tTrait\tExperiment\tTrait Group\tLOD\tR2\tFlanking markers in original publication");
 			flapjackBufferedWriter.write("QTL\tChromosome\tPosition\tMinimum\tMaximum\tTrait\tExperiment\tTrait Group\tLOD\tR2\tFlanking markers in original publication\teffect");
 			flapjackBufferedWriter.write("\n");
@@ -175,9 +176,7 @@ public class ExportFlapjackFileFormats {
 			flapjackBufferedWriter.close();
 		} catch (IOException e) {
 			throw new GDMSException(e.getMessage());
-		} /*catch (MiddlewareQueryException e) {
-			throw new GDMSException(e.getMessage());
-		}*/
+		} 
 		
 	}
 	
@@ -210,31 +209,31 @@ public class ExportFlapjackFileFormats {
 		generatedDatFile = new File(strFilePathGids + "\\" + strFlapjackDatFile + ".dat");
 		
 		
-		/*System.out.println("listOfAllAllelicValues=:"+a);
-		System.out.println("listOfMarkerNames=:"+listOfMarkerNames);
-		System.out.println("listOfGIDsToBeExported=:"+listOfGIDsToBeExported);*/
-		/*System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-		System.out.println(strFilePathGids);*/
+		/*//System.out.println("listOfAllAllelicValues=:"+a);
+		//System.out.println("listOfMarkerNames=:"+listOfMarkerNames);
+		//System.out.println("listOfGIDsToBeExported=:"+listOfGIDsToBeExported);*/
+		/*//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+		//System.out.println(strFilePathGids);*/
 		try {
 			FileWriter flapjackTextWriterGIDs = new FileWriter(generatedDatFile);
 			BufferedWriter fjackdatGids = new BufferedWriter(flapjackTextWriterGIDs);
 			
 			for(int m1 = 0; m1< listOfMarkerNames.size(); m1++){
-				//System.out.println("m1=:"+m1);
+				////System.out.println("m1=:"+m1);
 				fjackdatGids.write("\t"+listOfMarkerNames.get(m1));
 			}
 			
 			int al=0;
 			for (int j=0;j<listOfGIDsToBeExported.size();j++){ 
-				//System.out.println("jdfhgjkdfghkjdfhgkdfh          &&&&&&&&&&&&&&&&&&&&&&&&&&:");
+				////System.out.println("jdfhgjkdfghkjdfhgkdfh          &&&&&&&&&&&&&&&&&&&&&&&&&&:");
 				String arrList6[]=new String[3];
 				fjackdatGids.write("\n"+listOfGIDsToBeExported.get(j));		
 			    for (int k=0;k<listOfMarkerNames.size();k++){
 			    	if(al<a.size()){
-			    		//System.out.println("al="+al+"    "+a.get(al));
+			    		////System.out.println("al="+al+"    "+a.get(al));
 			    		String strList5=a.get(al).toString();
 			    		// String[] arrList6=strList5.split(",");
-			    		// System.out.println(k+":"+strList5);
+			    		// //System.out.println(k+":"+strList5);
 			    		StringTokenizer stz = new StringTokenizer(strList5.toString(), "!~!");
 			    		//arrList6 = new String[stz.countTokens()];
 			    		int i1=0;				  
@@ -242,11 +241,11 @@ public class ExportFlapjackFileFormats {
 			    			arrList6[i1] = stz.nextToken();
 			    			i1++;
 			    		}
-			    		//System.out.println(arrList6[0]+"==("+listOfGIDsToBeExported.get(j).toString()+")) && "+hmOfMIDandMNames.get(Integer.parseInt(arrList6[1]))+".equals("+listOfMarkerNames.get(k));
+			    		////System.out.println(arrList6[0]+"==("+listOfGIDsToBeExported.get(j).toString()+")) && "+hmOfMIDandMNames.get(Integer.parseInt(arrList6[1]))+".equals("+listOfMarkerNames.get(k));
 			    		condition=((Integer.parseInt(arrList6[0])==Integer.parseInt(listOfGIDsToBeExported.get(j).toString())) && hmOfMIDandMNames.get(Integer.parseInt(arrList6[1])).equals(listOfMarkerNames.get(k)));
 			    		if(condition){
 			    			if(arrList6[2].contains("/")){
-			    				//System.out.println("if \\");
+			    				////System.out.println("if \\");
 								String[] ChVal1=arrList6[2].split("/");
 								if(dType.equalsIgnoreCase("ssr")){
 									if(arrList6[2].length()==3){
@@ -287,7 +286,7 @@ public class ExportFlapjackFileFormats {
 							}else if(arrList6[2].contains("?")){
 								chVal="";
 							}else{
-								//System.out.println("else ?, :, /"+arrList6[2]);
+								////System.out.println("else ?, :, /"+arrList6[2]);
 								chVal=arrList6[2];
 							}
 			    			fjackdatGids.write("\t"+chVal);	
@@ -444,10 +443,10 @@ public class ExportFlapjackFileFormats {
 				fjackdat.write("\n"+listOfGNamesToBeExported.get(j));		
 			    for (int k=0;k<listOfMarkerNames.size();k++){
 			    	if(al<a.size()){
-			    		//System.out.println("al="+al+"    "+a.get(al));
+			    		////System.out.println("al="+al+"    "+a.get(al));
 			    		String strList5=a.get(al).toString();
 			    		// String[] arrList6=strList5.split(",");
-			    		 //System.out.println(k+":"+strList5);
+			    		 ////System.out.println(k+":"+strList5);
 			    		StringTokenizer stz = new StringTokenizer(strList5.toString(), "!~!");
 			    		//arrList6 = new String[stz.countTokens()];
 			    		int i1=0;				  
@@ -455,13 +454,13 @@ public class ExportFlapjackFileFormats {
 			    			arrList6[i1] = stz.nextToken();
 			    			i1++;
 			    		}
-			    		//System.out.println(hmOfGIdsAndNval.get(Integer.parseInt(arrList6[0]))+"  .equalsIgnoreCase(   "+listOfGNamesToBeExported.get(j).toString()+")) &&  "+ hmOfMIDandMNames.get(Integer.parseInt(arrList6[1]))+"  .equals(   "+listOfMarkerNames.get(k));	
+			    		////System.out.println(hmOfGIdsAndNval.get(Integer.parseInt(arrList6[0]))+"  .equalsIgnoreCase(   "+listOfGNamesToBeExported.get(j).toString()+")) &&  "+ hmOfMIDandMNames.get(Integer.parseInt(arrList6[1]))+"  .equals(   "+listOfMarkerNames.get(k));	
 			    		condition=((hmOfGIdsAndNval.get(Integer.parseInt(arrList6[0])).equalsIgnoreCase(listOfGNamesToBeExported.get(j).toString())) && hmOfMIDandMNames.get(Integer.parseInt(arrList6[1])).equals(listOfMarkerNames.get(k)));
 			    			
 					   
 			    		if(condition){
 			    			if(arrList6[2].contains("/")){
-			    				//System.out.println("if \\");
+			    				////System.out.println("if \\");
 								String[] ChVal1=arrList6[2].split("/");
 								if(dType.equalsIgnoreCase("ssr")){
 									if(arrList6[2].length()==3){
@@ -502,7 +501,7 @@ public class ExportFlapjackFileFormats {
 							}else if(arrList6[2].contains("?")){
 								chVal="";
 							}else{
-								//System.out.println("else ?, :, /"+arrList6[2]);
+								////System.out.println("else ?, :, /"+arrList6[2]);
 								chVal=arrList6[2];
 							}
 							fjackdat.write("\t"+chVal);	

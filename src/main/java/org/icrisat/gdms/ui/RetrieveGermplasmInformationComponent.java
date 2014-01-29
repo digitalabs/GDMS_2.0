@@ -95,7 +95,7 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 	protected HashMap<Integer, String> hmOfSelectedGIDsAndGNames;
 	private ArrayList<String> listOfMarkerNames;
 	
-	
+	String realPath="";
 	HashMap<Integer, HashMap<String, Object>> mapEx = new HashMap<Integer, HashMap<String,Object>>();	
 	HashMap<String,Object> markerAlleles= new HashMap<String,Object>();
 	HashMap marker = new HashMap();
@@ -107,9 +107,20 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 	
 	public RetrieveGermplasmInformationComponent(GDMSMain theMainHomePage){
 		_mainHomePage = theMainHomePage;
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		manager = factory.getGermplasmDataManager();
-		genoManager=factory.getGenotypicDataManager();
+		//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+		/*manager = factory.getGermplasmDataManager();
+		
+		genoManager=factory.getGenotypicDataManager();*/
+		
+		try{
+			factory=GDMSModel.getGDMSModel().getManagerFactory();		
+			genoManager=factory.getGenotypicDataManager();
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+		
+		
+		
 	}
 
 	/**
@@ -193,7 +204,7 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
                 	for (String string : hashSet) {
 						listOfGermplasmNamesSelected.add(string);
 					}
-                	//System.out.println(hashSet);
+                	////System.out.println(hashSet);
                 }
             }
         });
@@ -594,12 +605,12 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 
 	protected void getMarkerIDsForSelectedMarkers() {
 
-		MarkerDAO markerDAOForLocal = new MarkerDAO();
-		markerDAOForLocal.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
-		MarkerDAO markerDAOForCentral = new MarkerDAO();
-		markerDAOForCentral.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession());
-
+		
 		try {
+			MarkerDAO markerDAOForLocal = new MarkerDAO();
+			markerDAOForLocal.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
+			MarkerDAO markerDAOForCentral = new MarkerDAO();
+			markerDAOForCentral.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession());
 
 			long countAllLocal = markerDAOForLocal.countAll();
 			List<Integer> listOfMIDsByMNamesLocal = markerDAOForLocal.getIdsByNames(listOfMarkersSelected, 0, (int)countAllLocal);
@@ -651,6 +662,8 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 		} catch (MiddlewareQueryException e) {
 			_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Marker-IDs for Markers selected.", Notification.TYPE_ERROR_MESSAGE);
 			return;
+		} catch(GDMSException e){
+			e.printStackTrace();
 		}
 
 	}
@@ -667,7 +680,7 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 			String strGID = hashMapOfGIDsAndNIDsFromDB.get(strGNameSelected);
 			listOfGIDSelected.add(Integer.valueOf(strGID));
 		}
-		System.out.println("listOfGIDSelected-:"+listOfGIDSelected);
+		//System.out.println("listOfGIDSelected-:"+listOfGIDSelected);
 
 		/*MarkerDAO markerDAOForLocal = new MarkerDAO();
 		markerDAOForLocal.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
@@ -686,7 +699,7 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 				listOfSSRMarkerIDS=genoManager.getMarkerFromAlleleValuesByGids(listOfGIDSelected);
 				listOfSNPMarkerIDS=genoManager.getMarkerFromCharValuesByGids(listOfGIDSelected);
 				listOfMappingMarkerIDS=genoManager.getMarkerFromMappingPopByGids(listOfGIDSelected);
-				//System.out.println("^^^^^^^^^^^^^^^^^  :"+genoManager.getMarkerFromAlleleValuesByGids(listOfGIDSelected));
+				////System.out.println("^^^^^^^^^^^^^^^^^  :"+genoManager.getMarkerFromAlleleValuesByGids(listOfGIDSelected));
 				for(int sn=0; sn<listOfSNPMarkerIDS.size();sn++){
 					listOfMarkerIDS.add(listOfSNPMarkerIDS.get(sn));
 				}
@@ -706,7 +719,7 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 		            arrayListOfMarkerNames.add(e.getMarkerName());
 		        }
 			}
-			System.out.println("arrayListOfM%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%arkerNames=:"+arrayListOfMarkerNames);
+			//System.out.println("arrayListOfM%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%arkerNames=:"+arrayListOfMarkerNames);
 			
 
 		} catch (MiddlewareQueryException e) {
@@ -800,12 +813,13 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 		hmOfMapNameAndID = new HashMap<String, Integer>();
 
 		if (null != listOfMarkersSelected && 0 != listOfMarkersSelected.size()){
-			MapDAO mapDAOLocal = new MapDAO();
-			mapDAOLocal.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
-			MapDAO mapDAOCentral = new MapDAO();
-			mapDAOCentral.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession());			
-
+			
 			try {
+				MapDAO mapDAOLocal = new MapDAO();
+				mapDAOLocal.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
+				MapDAO mapDAOCentral = new MapDAO();
+				mapDAOCentral.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession());
+
 				List<Map> listofAllMapsFromLocal = mapDAOLocal.getAll();
 				List<Map> listOfAllMapsFromCentral = mapDAOCentral.getAll();
 
@@ -836,6 +850,8 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 			} catch (MiddlewareQueryException e) {
 				_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Maps from the database", Notification.TYPE_ERROR_MESSAGE);
 				return null;
+			} catch (GDMSException e){
+				e.printStackTrace();
 			}
 
 		}
@@ -942,12 +958,12 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 
 				if (_chbMatrix.getValue().toString().equals("true")){
 					strSelectedFormat = "Matrix";
-					//System.out.println("Format Selected: " + strSelectedFormat);
+					////System.out.println("Format Selected: " + strSelectedFormat);
 
 					try {
 						retrieveGermplasmDataForMatrixFormat();
-						/*System.out.println("gids selected=:"+ listOfGIDsSelected);
-						System.out.println("markers selected=:"+listOfMarkersSelected);*/
+						//System.out.println("gids selected=:"+ listOfGIDsSelected);
+						//System.out.println("markers selected=:"+listOfMarkersSelected);
 						dataToBeExportedBuiltSuccessfully = true;
 					} catch (GDMSException e1) {
 						_mainHomePage.getMainWindow().getWindow().showNotification(e1.getExceptionMessage(), Notification.TYPE_ERROR_MESSAGE);
@@ -963,7 +979,7 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 							return;
 						}
 
-						//System.out.println("Received the generated Matrix file.");
+						////System.out.println("Received the generated Matrix file.");
 					}
 
 				} else if (_chbFlapjack.getValue().toString().equals("true")){
@@ -990,7 +1006,7 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 					} else {
 						strSelectedColumn = "";
 					}
-					//System.out.println("Selected Map: " + strSelectedMap + " --- " + "Selected Column: " + strSelectedColumn);
+					////System.out.println("Selected Map: " + strSelectedMap + " --- " + "Selected Column: " + strSelectedColumn);
 
 					if (strSelectedMap.equals("")){
 						
@@ -1034,6 +1050,8 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 										_mainHomePage.getMainWindow().getWindow().showNotification("Please select the required column GID or Germplasm for the Flapjack export.", Notification.TYPE_ERROR_MESSAGE);
 										return;
 									} 
+									
+									
 									
 									RetrieveDataForFlapjack retrieveDataForFlapjack = new RetrieveDataForFlapjack(_mainHomePage);
 									retrieveDataForFlapjack.setGenotypingType("Germplasm Names");
@@ -1080,8 +1098,12 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 					if ("true".equals(_chbFlapjack.getValue().toString())){
 						strSelectedFormat = "Flapjack";
 					}
-
-					//System.out.println("Trying to retrieve Data required for Flapjack format.");
+					//System.out.println("*************  listOfGermplasmNamesSelected:"+listOfGermplasmNamesSelected);
+					//System.out.println("***********    listOfGIDsSelected=:"+listOfGIDsSelected);
+					//System.out.println("***********    listOfMarkersSelected=:"+listOfMarkersSelected);
+					
+					
+					////System.out.println("Trying to retrieve Data required for Flapjack format.");
 					if (bGenerateFlapjack) {
 						RetrieveDataForFlapjack retrieveDataForFlapjack = new RetrieveDataForFlapjack(_mainHomePage);
 						retrieveDataForFlapjack.setGenotypingType("Germplasm Names");
@@ -1184,15 +1206,14 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 		alleleValuesDAOCentral.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession());
 
 		listAlleleValueElementsForGIDsSelected = new ArrayList<AllelicValueElement>();*/
-		
 		ArrayList glist = new ArrayList();
 		ArrayList midslist = new ArrayList();
 		String data="";
-		
-		/*System.out.println("listOfMarkersSelected=:"+listOfMarkersSelected);
-		System.out.println("listOfGIDsSelected:"+listOfGIDsSelected);*/
+		//System.out.println("listOfMarkersSelected=:"+listOfMarkersSelected);
+		//System.out.println("listOfGIDsSelected:"+listOfGIDsSelected);
 		try {
 			List<AllelicValueElement> allelicValues =genoManager.getAllelicValuesByGidsAndMarkerNames(listOfGIDsSelected, listOfMarkersSelected);
+			
 			//System.out.println(" allelicValues =:"+allelicValues);		
 			marker = new HashMap();
 			if (null != allelicValues){
@@ -1241,7 +1262,7 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 
 		File baseDirectory = _mainHomePage.getMainWindow().getApplication().getContext().getBaseDirectory();
 		File absoluteFile = baseDirectory.getAbsoluteFile();
-		//System.out.println(absoluteFile);
+		////System.out.println(absoluteFile);
 
 
 		File[] listFiles = absoluteFile.listFiles();
@@ -1316,13 +1337,18 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 
 
 		final String strFJVisualizeLink = strAbsolutePath + "\\" + "flapjackrun.bat";
-		//System.out.println(strFJVisualizeLink);
+		////System.out.println(strFJVisualizeLink);
+		realPath=_mainHomePage.getMainWindow().getApplication().getContext().getBaseDirectory().toString();
 		Button btnVisualizeFJ = new Button("Visualize in Flapjack");
 		btnVisualizeFJ.setStyleName(Reindeer.BUTTON_LINK);
 		btnVisualizeFJ.addListener(new Button.ClickListener() {
 			private static final long serialVersionUID = 1L;
 			public void buttonClick(ClickEvent event) {
-				//System.out.println("Trying to execute the flapjackrun.bat file.");
+				
+				File fexists=new File(realPath+"/Flapjack/Flapjack.flapjack");
+				if(fexists.exists()) { fexists.delete(); 
+				////System.out.println("proj exists and deleted");
+				}
 				String[] cmd = {"cmd.exe", "/c", "start", "\""+"flapjack"+"\"", strFJVisualizeLink};
 				Runtime rt = Runtime.getRuntime();
 				try {
@@ -1359,8 +1385,23 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 			layoutForExportTypes.addComponent(excelButton);
 		}
 
-		//System.out.println("Selected Format: " + strSelectedFormat);
+		/*themeResource = new ThemeResource("images/pdf.gif");
+		Button pdfButton = new Button();
+		pdfButton.setIcon(themeResource);
+		pdfButton.setStyleName(Reindeer.BUTTON_LINK);
+		pdfButton.setDescription("PDF Format");
+		pdfButton.addListener(this);
+		layoutForExportTypes.addComponent(pdfButton);
 
+		themeResource = new ThemeResource("images/print.gif");
+		Button printButton = new Button();
+		printButton.setIcon(themeResource);
+		printButton.setStyleName(Reindeer.BUTTON_LINK);
+		printButton.setDescription("Print Format");
+		printButton.addListener(this);
+		layoutForExportTypes.addComponent(printButton);*/
+
+		////System.out.println("Selected Format: " + strSelectedFormat);
 		//20131216: Added link to download Similarity Matrix File
 		final String strSMVisualizeLink = strAbsolutePath + "\\" + "flapjackMatrix.bat";
 		Button similarityMatrixButton = new Button("Show Similarity Matrix");
@@ -1388,7 +1429,7 @@ public class RetrieveGermplasmInformationComponent implements Component.Listener
 			}
 		});
 		//20131216: Added link to download Similarity Matrix File
-	
+		
 		if (null != strSelectedFormat){
 			if (strSelectedFormat.equals("Flapjack")){
 				//resultsLayout.addComponent(btnFJDat);

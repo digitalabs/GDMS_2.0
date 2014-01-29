@@ -31,21 +31,25 @@ import org.generationcp.middleware.dao.gdms.MappingPopValuesDAO;
 import org.generationcp.middleware.dao.gdms.MarkerDAO;
 import org.generationcp.middleware.dao.gdms.QtlDAO;
 import org.generationcp.middleware.exceptions.MiddlewareQueryException;
+import org.generationcp.middleware.manager.Database;
 import org.generationcp.middleware.manager.ManagerFactory;
 import org.generationcp.middleware.manager.api.GenotypicDataManager;
 import org.generationcp.middleware.manager.api.GermplasmDataManager;
 import org.generationcp.middleware.manager.api.OntologyDataManager;
 import org.generationcp.middleware.pojos.Name;
+import org.generationcp.middleware.pojos.gdms.AccMetadataSetPK;
 import org.generationcp.middleware.pojos.gdms.AllelicValueElement;
 import org.generationcp.middleware.pojos.gdms.GermplasmMarkerElement;
 import org.generationcp.middleware.pojos.gdms.Map;
 import org.generationcp.middleware.pojos.gdms.MappingData;
 import org.generationcp.middleware.pojos.gdms.MappingPopValues;
 import org.generationcp.middleware.pojos.gdms.MappingValueElement;
+import org.generationcp.middleware.pojos.gdms.Marker;
 import org.generationcp.middleware.pojos.gdms.MarkerIdMarkerNameElement;
-import org.generationcp.middleware.pojos.gdms.MarkerNameElement;
+import org.generationcp.middleware.pojos.gdms.MarkerMetadataSet;
 import org.generationcp.middleware.pojos.gdms.Qtl;
 import org.generationcp.middleware.pojos.gdms.QtlDetails;
+import org.generationcp.middleware.util.Debug;
 import org.hibernate.HibernateException;
 import org.hibernate.SQLQuery;
 import org.hibernate.Session;
@@ -126,11 +130,11 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 	private ArrayList<String> listOfMarkerNameElement;
 	private File matrixFile;
 	private HashMap<Integer, String> hmOfGIDsAndGermplamsSelected;
-	
+	ArrayList<Integer> listOfNameIDs = new ArrayList<Integer>();
 	HashMap<Integer, HashMap<String, Object>> mapEx = new HashMap<Integer, HashMap<String,Object>>();	
 	HashMap<String,Object> markerAlleles= new HashMap<String,Object>();
 	HashMap marker = new HashMap();
-	
+	ArrayList datasetIDs= new ArrayList();
 	
 	private String _strSeletedFlapjackType = null;
 	private List<File> generateFlagjackFiles;
@@ -141,14 +145,20 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 	GermplasmDataManager manager;
 	GenotypicDataManager genoManager;
 	private Button markersSampleFile;
+	private HashMap<Integer, String> hmOfSelectedMIDandMNames;
 	public RetrieveMarkersComponent(GDMSMain theMainHomePage){
 		_mainHomePage = theMainHomePage;
-		localSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
-		centralSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		om=factory.getOntologyDataManager();
-		manager = factory.getGermplasmDataManager();
-		genoManager=factory.getGenotypicDataManager();
+		try{
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+			factory = GDMSModel.getGDMSModel().getManagerFactory();
+			om=factory.getOntologyDataManager();
+			manager = factory.getGermplasmDataManager();
+			genoManager=factory.getGenotypicDataManager();
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 	}
 
 
@@ -169,10 +179,10 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 
 		buildMarkerResultComponent = buildResultComponent();
 
-		buildGIDComponent.setSizeFull();
-		buildMarkerGermplasmComponent.setSizeFull();
-		buildFormatComponent.setSizeFull();
-		buildMarkerResultComponent.setSizeFull();
+		//buildGIDComponent.setSizeFull();
+		//buildMarkerGermplasmComponent.setSizeFull();
+		//buildFormatComponent.setSizeFull();
+		//buildMarkerResultComponent.setSizeFull();
 		
 		_tabsheetForMarkers.addComponent(buildGIDComponent);
 		_tabsheetForMarkers.addComponent(buildMarkerGermplasmComponent);
@@ -212,7 +222,7 @@ public class RetrieveMarkersComponent  implements Component.Listener {
                 
 				WebApplicationContext ctx = (WebApplicationContext) _mainHomePage.getContext();
                 String strTemplateFolderPath = ctx.getHttpSession().getServletContext().getRealPath("\\VAADIN\\themes\\gdmstheme\\Templates");
-                //System.out.println("Folder-Path: " + strTemplateFolderPath);
+                System.out.println("Folder-Path: " + strTemplateFolderPath);
                 
 				//String strMarkerType = _strMarkerType.replace(" ", "");
 				String strFileName = "Markers.txt";
@@ -364,28 +374,29 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 		
 		//exportFileFormats.Matrix(listOfGIDs, listOfMarkerElementsFromDB, listOfMarkersProvided, listOfAllelicValues, listGermplasmsSelected, listOfMappingValues);
 
-		markerDAOLocal = new MarkerDAO();
+		/*markerDAOLocal = new MarkerDAO();
 		markerDAOLocal.setSession(localSession);
 		markerDAOCentral = new MarkerDAO();
-		markerDAOCentral.setSession(centralSession);
+		markerDAOCentral.setSession(centralSession);*/
 		listOfMarkerIds = new ArrayList<Integer>();
 		try {
-
-			long countAll = markerDAOLocal.countAll();
-			List<Integer> listOfMarkerIdsFromLocal = markerDAOLocal.getIdsByNames(listOfMarkersProvided, 0, (int)countAll);
-			long countAll2 = markerDAOCentral.countAll();
-			List<Integer> listOfMarkerIDsFromCentral = markerDAOCentral.getIdsByNames(listOfMarkersProvided, 0, (int)countAll2);
-
-			for (Integer iMarkerID : listOfMarkerIdsFromLocal){
-				if (false == listOfMarkerIds.contains(iMarkerID)){
-					listOfMarkerIds.add(iMarkerID);
-				}
-			}
+			List<Integer> listOfMarkerIdsFromLocal =genoManager.getMarkerIdsByMarkerNames(listOfMarkersProvided, 0, listOfMarkersProvided.size(), Database.LOCAL);
+			//long countAll = markerDAOLocal.countAll();
+			//List<Integer> listOfMarkerIdsFromLocal = markerDAOLocal.getIdsByNames(listOfMarkersProvided, 0, (int)countAll);
+			//long countAll2 = markerDAOCentral.countAll();
+			//List<Integer> listOfMarkerIDsFromCentral = markerDAOCentral.getIdsByNames(listOfMarkersProvided, 0, (int)countAll2);
+			List<Integer> listOfMarkerIDsFromCentral = genoManager.getMarkerIdsByMarkerNames(listOfMarkersProvided, 0, listOfMarkersProvided.size(), Database.CENTRAL);
 			for (Integer iMarkerID : listOfMarkerIDsFromCentral){
 				if (false == listOfMarkerIds.contains(iMarkerID)){
 					listOfMarkerIds.add(iMarkerID);
 				}
 			}
+			for (Integer iMarkerID : listOfMarkerIdsFromLocal){
+				if (false == listOfMarkerIds.contains(iMarkerID)){
+					listOfMarkerIds.add(iMarkerID);
+				}
+			}
+			
 			
 		} catch (MiddlewareQueryException e) {
 			//_mainHomePage.getMainWindow().getWindow().showNotification("Error Retrieving Marker-IDs for the Markers provided", Notification.TYPE_ERROR_MESSAGE);
@@ -398,9 +409,23 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 		alleleValuesDAOLocal.setSession(localSession);
 		alleleValuesDAOCentral = new AlleleValuesDAO();
 		alleleValuesDAOCentral.setSession(centralSession);
+		datasetIDs= new ArrayList();
 		for (int i = 0; i < listOfMarkerIds.size(); i++){
 			Integer iMarkerID = listOfMarkerIds.get(i);
 			try {
+				//genoManager.getAllFromMarkerMetadatasetByMarker(arg0)
+				
+				List<MarkerMetadataSet> result = genoManager.getAllFromMarkerMetadatasetByMarker(iMarkerID);
+				if (result != null) {
+		            for (MarkerMetadataSet elem : result) {
+		               // Debug.println(4, elem.toString());
+		            	datasetIDs.add(elem.getDatasetId());
+		            }
+		        }
+				
+				//genoManager.getAllFromAccMetadataset(arg0, arg1, arg2)
+				
+				/*
 				
 				long countGIDsByMarkerId = alleleValuesDAOLocal.countGIDsByMarkerId(iMarkerID);
 				List<Integer> giDsByMarkerId = alleleValuesDAOLocal.getGIDsByMarkerId(iMarkerID, 0, (int)countGIDsByMarkerId);
@@ -416,15 +441,34 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 					if (false == listOfGIDs.contains(iGID)){
 						listOfGIDs.add(iGID);
 					}
-				}
+				}*/
 			} catch (MiddlewareQueryException e) {
 				//_mainHomePage.getMainWindow().getWindow().showNotification("Error Retrieving GIDs for the Markers provided", Notification.TYPE_ERROR_MESSAGE);
 				//return;
 				throw new GDMSException("Error Retrieving GIDs for the Markers provided");
 			}
 		}
+		if (0 == datasetIDs.size()){
+			//_mainHomePage.getMainWindow().getWindow().showNotification("No Genotyping data for the provided marker(s)", Notification.TYPE_ERROR_MESSAGE);
+			//return;
+			throw new GDMSException("No Genotyping data for the provided marker(s)");
+		}
+		try{
+			listOfNameIDs = new ArrayList<Integer>();
+			List<Integer> nids = genoManager.getNidsFromAccMetadatasetByDatasetIds(datasetIDs, 0, 20000);
+			for(int n=0; n<nids.size(); n++){
+				listOfNameIDs.add(Integer.parseInt(nids.get(n).toString()));
+			}
+			
+		} catch (MiddlewareQueryException e) {
+			//_mainHomePage.getMainWindow().getWindow().showNotification("Error Retrieving GIDs for the Markers provided", Notification.TYPE_ERROR_MESSAGE);
+			//return;
+			
+			throw new GDMSException("Error Retrieving GIDs for the Markers provided");
+		}
 		
-		CharValuesDAO charValuesDAOLocal = new CharValuesDAO();
+		
+		/*CharValuesDAO charValuesDAOLocal = new CharValuesDAO();
 		charValuesDAOLocal.setSession(localSession);
 		CharValuesDAO charValuesDAOCentral = new CharValuesDAO();
 		charValuesDAOCentral.setSession(centralSession);
@@ -490,9 +534,9 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 			//return;
 			throw new GDMSException("No Genotyping data for the provided marker(s)");
 		}
+		*/
 		
-		
-		AccMetadataSetDAO accMetadataSetDAOLocal = new AccMetadataSetDAO();
+		/*AccMetadataSetDAO accMetadataSetDAOLocal = new AccMetadataSetDAO();
 		accMetadataSetDAOLocal.setSession(localSession);
 		AccMetadataSetDAO accMetadataSetDAOCentral = new AccMetadataSetDAO();
 		accMetadataSetDAOCentral.setSession(centralSession);
@@ -516,18 +560,33 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 			//return;
 			throw new GDMSException("Error Retrieving Names for the GIDs");
 		}
-		
-		
-		NameDAO nameDAOLocal = new NameDAO();
+		*/
+		Name names = null;
+		/*NameDAO nameDAOLocal = new NameDAO();
 		nameDAOLocal.setSession(localSession);
 		NameDAO nameDAOCentral = new NameDAO();
-		nameDAOCentral.setSession(centralSession);
-		ArrayList<Name> listOfAllNames = new ArrayList<Name>();
+		nameDAOCentral.setSession(centralSession);*/
+		//ArrayList<Name> listOfAllNames = new ArrayList<Name>();
 		try {
-			List<Name> namesByNameIds = nameDAOLocal.getNamesByNameIds(listOfNameIDs);
+			/*List<Name> namesByNameIds = nameDAOLocal.getNamesByNameIds(listOfNameIDs);
 			List<Name> namesByNameIds2 = nameDAOCentral.getNamesByNameIds(listOfNameIDs);
-
-			for (Name name : namesByNameIds){
+			*/
+			listOfGermplasmsByMarkers = new ArrayList<String>();
+			hmOfGNamesAndGids = new HashMap<String, Integer>();
+			for(int n=0;n<listOfNameIDs.size();n++){
+				names=manager.getGermplasmNameByID(Integer.parseInt(listOfNameIDs.get(n).toString()));
+				String nval = names.getNval();
+				Integer germplasmId = names.getGermplasmId();
+				if (false == listOfGermplasmsByMarkers.contains(nval)){
+					/*listOfAllGermplasmNamesForGIDsProvided.add(nval);
+					hmOfGIDAndGName.put(germplasmId, nval);
+					*/
+					listOfGermplasmsByMarkers.add(nval);
+					hmOfGNamesAndGids.put(nval, germplasmId);
+				}
+				
+			}
+			/*for (Name name : namesByNameIds){
 				if (false == listOfAllNames.contains(name)){
 					listOfAllNames.add(name);
 				}
@@ -536,7 +595,7 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 				if (false == listOfAllNames.contains(name)){
 					listOfAllNames.add(name);
 				}
-			}
+			}*/
 			
 		} catch (MiddlewareQueryException e) {
 			//_mainHomePage.getMainWindow().getWindow().showNotification("Error Retrieving Names for the GIDs", Notification.TYPE_ERROR_MESSAGE);
@@ -544,7 +603,7 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 			throw new GDMSException("Error Retrieving Names for the GIDs");
 		}
 		
-		hmOfGNamesAndGids = new HashMap<String, Integer>();
+		/*hmOfGNamesAndGids = new HashMap<String, Integer>();
 		if (0 != listOfAllNames.size()){
 			listOfGermplasmsByMarkers = new ArrayList<String>();
 			for (Name name : listOfAllNames){
@@ -558,7 +617,7 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 			//return;
 			throw new GDMSException("There are not Lines for the Markers provided");
 		}
-		
+		*/
 	}
 
 
@@ -840,7 +899,7 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 			
 			List<AllelicValueElement> allelicValues =genoManager.getAllelicValuesByGidsAndMarkerNames(listOfGIDsSelected, listOfMarkerNameElement);
 			
-			//System.out.println(" allelicValues =:"+allelicValues);		
+			System.out.println(" allelicValues =:"+allelicValues);		
 			marker = new HashMap();
 			if (null != allelicValues){
 				for (AllelicValueElement allelicValueElement : allelicValues){
@@ -983,6 +1042,7 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 		horizLayoutForColumns.addComponent(optionGroupForColumn);
 		
 		final ComboBox selectMap = new ComboBox();
+		selectMap.setWidth("200px");
 		Object itemId = selectMap.addItem();
 		selectMap.setItemCaption(itemId, "Select Map");
 		selectMap.setValue(itemId);
@@ -996,10 +1056,40 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 
 		if (null != listGermplasmsSelected && 0 != listGermplasmsSelected.size()){
 			MapDAO mapDAOLocal = new MapDAO();
-			mapDAOLocal.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+			mapDAOLocal.setSession(localSession);
 			MapDAO mapDAOCentral = new MapDAO();
-			mapDAOCentral.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession());			
+			mapDAOCentral.setSession(centralSession);			
+			try {
 
+				List<Map> listOfAllMapsLocal = genoManager.getAllMaps(0, (int)genoManager.countAllMaps(Database.LOCAL), Database.LOCAL);
+				List<Map> listOfAllMapsCentral = genoManager.getAllMaps(0, (int)genoManager.countAllMaps(Database.CENTRAL), Database.CENTRAL);
+
+				for (Map map: listOfAllMapsLocal){
+					if (false == arrayListOfMapNames.contains(map)){
+						arrayListOfMapNames.add(map.getMapName());
+						hmOfMapNameAndID.put(map.getMapName(), map.getMapId());
+					}
+				}
+				for (Map map: listOfAllMapsCentral){
+					if (false == arrayListOfMapNames.contains(map)){
+						arrayListOfMapNames.add(map.getMapName());
+						hmOfMapNameAndID.put(map.getMapName(), map.getMapId());
+					}
+				}
+
+				if (null != arrayListOfMapNames){
+					for (int i = 0; i < arrayListOfMapNames.size(); i++){
+						//Map map = listOfAllMaps.get(i);
+						selectMap.addItem(arrayListOfMapNames.get(i));
+					}
+				}
+
+			} catch (MiddlewareQueryException e) {
+				_mainHomePage.getMainWindow().getWindow().showNotification("Error Retrieving Maps",  Notification.TYPE_ERROR_MESSAGE);
+				return null;
+			}
+			
+			/*
 			try {
 				List<Map> listofAllMapsFromLocal = mapDAOLocal.getAll();
 				List<Map> listOfAllMapsFromCentral = mapDAOCentral.getAll();
@@ -1031,13 +1121,13 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 			} catch (MiddlewareQueryException e) {
 				_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Maps from the database", Notification.TYPE_ERROR_MESSAGE);
 				return null;
-			}
+			}*/
 
 		}
 
-		for (String strMapName : arrayListOfMapNames){
+		/*for (String strMapName : arrayListOfMapNames){
 			selectMap.addItem(strMapName);
-		}
+		}*/
 
 		/**
 		 * 
@@ -1253,7 +1343,12 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 										return;
 									}
 									
-									generateFlagjackFiles = generateFlagjackFiles(strSelectedMap, _strSeletedFlapjackType);
+									try {
+										generateFlagjackFiles = generateFlagjackFiles(strSelectedMap, _strSeletedFlapjackType);
+									} catch (GDMSException e) {
+										_mainHomePage.getMainWindow().getWindow().showNotification(e.getExceptionMessage(), Notification.TYPE_ERROR_MESSAGE);
+										return;
+									}
 									if (null != generateFlagjackFiles){
 										dataToBeExportedBuiltSuccessfully = true;
 									}
@@ -1284,7 +1379,12 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 						}
 					}
 					if (bGenerateFlapjack) {
-						generateFlagjackFiles = generateFlagjackFiles(strSelectedMap, _strSeletedFlapjackType);
+						try {
+							generateFlagjackFiles = generateFlagjackFiles(strSelectedMap, _strSeletedFlapjackType);
+						} catch (GDMSException e) {
+							_mainHomePage.getMainWindow().getWindow().showNotification(e.getExceptionMessage(),  Notification.TYPE_ERROR_MESSAGE);
+							return;
+						}
 						if (null != generateFlagjackFiles){
 							dataToBeExportedBuiltSuccessfully = true;
 						}
@@ -1353,7 +1453,7 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 		return completeFormatLayout;
 	}
 
-	private List<File> generateFlagjackFiles(String theMap, String theSeletedFlapjackType2) {
+	private List<File> generateFlagjackFiles(String theMap, String theSeletedFlapjackType2) throws GDMSException {
 		generateFlagjackFiles = null;
 		if(null == listGermplasmsSelected) {
 			return null;
@@ -1379,6 +1479,12 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 		
 		//listGermplasmsSelected
 		try {
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+			
+			
 			List<Integer> listOfNewGids = new ArrayList<Integer>();
 			List<String> listOfNVals = new ArrayList<String>();
 			List<String> list = new ArrayList<String>();
@@ -1538,11 +1644,13 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 				}
 			}
 			
-			
+			List<Qtl> qtlDetails = null;
 			String mapData = "";
+			Integer iMapId = 0;
 			List<String> markersInMap = new ArrayList<String>();
 			List<MappingData> mappingData = getMappingData(strMap);
 			for (MappingData mapInfo : mappingData) {
+				iMapId = mapInfo.getMapId();
 				mapData=mapData+mapInfo.getMarkerName()+"!~!"+mapInfo.getLinkageGroup()+"!~!"+mapInfo.getStartPosition()+"~~!!~~";
 				if(!markersInMap.contains(mapInfo.getMarkerName()))
 					markersInMap.add(mapInfo.getMarkerName());
@@ -1556,17 +1664,84 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 			}
 			
 			//get QTl ids list details using list of gids
-			List<Integer> listOfMapIds = getListOfMapIds(strMap);
-			
-			List<QtlDetails> qtlIdsListByListOfMapIds = getQTLIdsListByListOfMapIds(listOfMapIds);
-			boolean bQTLPresent = false;
-			if(null != qtlIdsListByListOfMapIds && 0 != qtlIdsListByListOfMapIds.size()) {
-				bQTLPresent = true;
+			ArrayList<Integer> listOfMapIds = new ArrayList();
+			if(!strMap.isEmpty()){
+			int mapId=genoManager.getMapIdByName(strMap);
+			listOfMapIds.add(mapId);
+			List<QtlDetails> qtlIdsListByListOfMapIds=null ;
+			for(int m=0;m<listOfMapIds.size();m++){
+				qtlIdsListByListOfMapIds = genoManager.getQtlDetailsByMapId(listOfMapIds.get(m));
+				//List<QtlDetails> qtlIdsListByListOfMapIds = getQTLIdsListByListOfMapIds(listOfMapIds);
+				boolean bQTLPresent = false;
+				if(null != qtlIdsListByListOfMapIds && 0 != qtlIdsListByListOfMapIds.size()) {
+					bQTLPresent = true;
+				}
 			}
-			List<Qtl> qtlDetails = getQTLDAO(qtlIdsListByListOfMapIds);
+			qtlDetails = getQTLDAO(qtlIdsListByListOfMapIds);
+			}
+			//List<File> createDatFile = createDatFile(listOfMarkersProvided, listOfGIDs, bGIDs, qtlIdsListByListOfMapIds, qtlDetails, mapData, finalMappingValues, list, bQTLPresent);
 			
-			List<File> createDatFile = createDatFile(listOfMarkersProvided, listOfGIDs, bGIDs, qtlIdsListByListOfMapIds, qtlDetails, mapData, finalMappingValues, list, bQTLPresent);
+			MarkerDAO markerDAOForLocal = new MarkerDAO();
+			markerDAOForLocal.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
+			MarkerDAO markerDAOForCentral = new MarkerDAO();
+			markerDAOForCentral.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession());
+
+			long countAllLocal = markerDAOForLocal.countAll();
+			List<Integer> listOfMIDsByMNamesLocal = markerDAOForLocal.getIdsByNames(listOfMarkersProvided, 0, (int)countAllLocal);
+
+			long countAllCentral = markerDAOForCentral.countAll();
+			List<Integer> listOfMIDsByMNamesCentral = markerDAOForCentral.getIdsByNames(listOfMarkersProvided, 0, (int)countAllCentral);
 			
+			hmOfSelectedMIDandMNames = new HashMap<Integer, String>();
+			long countMarkersByIds = markerDAOForLocal.countMarkersByIds(listOfMarkerIds);
+			List<Marker> listOfMarkersByIdsLocal = markerDAOForLocal.getMarkersByIds(listOfMarkerIds, 0, (int)countMarkersByIds);
+			long countMarkersByIds2 = markerDAOForCentral.countMarkersByIds(listOfMarkerIds);
+			List<Marker> listOfMarkersByCentral = markerDAOForCentral.getMarkersByIds(listOfMarkerIds, 0, (int)countMarkersByIds2);
+
+			if (null != listOfMarkersByIdsLocal){
+				for (Marker marker : listOfMarkersByIdsLocal){
+					Integer markerId = marker.getMarkerId();
+					String markerName = marker.getMarkerName();
+					if (false == hmOfSelectedMIDandMNames.containsKey(markerId)){
+						hmOfSelectedMIDandMNames.put(markerId, markerName);
+					}
+				}
+			}
+			if (null != listOfMarkersByCentral){
+				for (Marker marker : listOfMarkersByCentral){
+					Integer markerId = marker.getMarkerId();
+					String markerName = marker.getMarkerName();
+					if (false == hmOfSelectedMIDandMNames.containsKey(markerId)){
+						hmOfSelectedMIDandMNames.put(markerId, markerName);
+					}
+				}
+			}
+
+			
+			RetrieveDataForFlapjack retrieveDataForFlapjack = new RetrieveDataForFlapjack(_mainHomePage);
+			retrieveDataForFlapjack.setGenotypingType("Markers");
+			retrieveDataForFlapjack.setListOfGermplasmsProvided(listOfGermplasmsByMarkers);
+			retrieveDataForFlapjack.setListOfMarkersSelected(listOfMarkersProvided);
+			retrieveDataForFlapjack.setListOfGIDsSelected((ArrayList<Integer>) listOfGIDs);
+			retrieveDataForFlapjack.setListOfMIDsSelected(listOfMarkerIds);
+			retrieveDataForFlapjack.setHashmapOfSelectedMIDsAndMNames(hmOfSelectedMIDandMNames);
+			retrieveDataForFlapjack.setHashmapOfSelectedGIDsAndGNames(hmOfGIDsAndGermplamsSelected);
+			retrieveDataForFlapjack.setMapSelected(strSelectedMap, iMapId);
+			retrieveDataForFlapjack.setExportType(strSelectedColumn);
+			retrieveDataForFlapjack.retrieveFlapjackData();
+			
+			boolean dataToBeExportedBuiltSuccessfully = retrieveDataForFlapjack.isFlapjackDataBuiltSuccessfully();
+
+			List<File> createDatFile = new ArrayList<File>();
+			if (dataToBeExportedBuiltSuccessfully){
+				File generatedTextFile = retrieveDataForFlapjack.getGeneratedTextFile();
+				File generatedMapFile = retrieveDataForFlapjack.getGeneratedMapFile();
+				File generatedDatFile = retrieveDataForFlapjack.getGeneratedDatFile();
+				
+				createDatFile.add(generatedTextFile);
+				createDatFile.add(generatedMapFile);
+				createDatFile.add(generatedDatFile);
+			}
 			return createDatFile;
 		} catch (MiddlewareQueryException e) {
 			_mainHomePage.getMainWindow().getWindow().showNotification("Error while generating flapjack files.",  Notification.TYPE_ERROR_MESSAGE);
@@ -2171,7 +2346,9 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 	}
 
 
-	private List<Integer> getListOfMapIds(String strMap) throws MiddlewareQueryException {
+	/*private List<Integer> getListOfMapIds(String strMap) throws MiddlewareQueryException {
+		
+		genoManager.getMapIdByName(arg0)
 		List<Integer> listOfMapIds = new ArrayList<Integer>();
 		List<Map> mapDAO = getMapDAO();
 		for (Map map : mapDAO) {
@@ -2182,10 +2359,10 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 			}
 		}
 		return listOfMapIds;
-	}
+	}*/
 
 
-	private List<Map> getMapDAO() throws MiddlewareQueryException {
+	/*private List<Map> getMapDAO() throws MiddlewareQueryException {
 		List<Map> listToReturn = new ArrayList<Map>();
 		List<Map> localMapDAO = getLocalMapDAO();
 		if(null != localMapDAO) {
@@ -2196,10 +2373,10 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 			listToReturn.addAll(centralMapDAO);
 		}
 		return listToReturn;
-	}
+	}*/
 
 
-	private List<Map> getCentralMapDAO() throws MiddlewareQueryException {
+	/*private List<Map> getCentralMapDAO() throws MiddlewareQueryException {
 		MapDAO mapDAO = new MapDAO();
 		mapDAO.setSession(centralSession);
 		List<Map> all = mapDAO.getAll();
@@ -2213,11 +2390,21 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 		List<Map> all = mapDAO.getAll();
 		return all;
 	}
-
+*/
 	
 	private List<Integer> getNidfromAccMetadataset(List<Integer> integerGID) throws MiddlewareQueryException {
 		List<Integer> listOfNids = new ArrayList<Integer>();
-		List<Integer> localMetadataSetDAO = getLocalMetadataSetDAO(integerGID);
+		
+		Name names = null;
+		List<AccMetadataSetPK> accMetadataSets = genoManager.getGdmsAccMetadatasetByGid(integerGID, 0, (int) genoManager.countGdmsAccMetadatasetByGid(integerGID));
+       // Debug.println(0, "testGetGdmsAccMetadatasetByGid() RESULTS: ");
+        for (AccMetadataSetPK accMetadataSet : accMetadataSets) {
+            //Debug.println(0, accMetadataSet.toString());
+        	listOfNids.add(accMetadataSet.getNameId());
+        	datasetIDs.add(accMetadataSet.getDatasetId());
+        }
+		
+		/*List<Integer> localMetadataSetDAO = getLocalMetadataSetDAO(integerGID);
 		if(null != localMetadataSetDAO) {
 			for (Integer integer : localMetadataSetDAO) {
 				if(false == listOfNids.contains(integer)) {
@@ -2232,24 +2419,24 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 					listOfNids.add(integer);
 				}
 			}
-		}
+		}*/
 		return listOfNids;
 	}
 
 
-	private List<Integer> getCentralMetadataSetDAO(List<Integer> integerGID)
+	/*private List<Integer> getCentralMetadataSetDAO(List<Integer> integerGID)
 			throws MiddlewareQueryException {
 		AccMetadataSetDAO accMetadataSetDAO = new AccMetadataSetDAO();
 		accMetadataSetDAO.setSession(centralSession);
 		return accMetadataSetDAO.getNameIdsByGermplasmIds(integerGID);
-	}
+	}*/
 
-
+/*
 	private List<Integer> getLocalMetadataSetDAO(List<Integer> integerGID) throws MiddlewareQueryException {
 		AccMetadataSetDAO accMetadataSetDAO = new AccMetadataSetDAO();
 		accMetadataSetDAO.setSession(localSession);
 		return accMetadataSetDAO.getNameIdsByGermplasmIds(integerGID);
-	}
+	}*/
 
 
 	private Component buildResultComponent() {
@@ -2413,7 +2600,8 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 		layoutForExportTypes.addComponent(printButton);*/ 
 		//20131210: Tulasi --- Not displaying the PDF and Print buttons
 
-		//20131216: Added link to download Similarity Matrix File
+			//20131216: Added link to download Similarity Matrix File
+		final String strSMVisualizeLink = strAbsolutePath + "\\" + "flapjackMatrix.bat";
 		Button similarityMatrixButton = new Button("Similarity Matrix File");
 		similarityMatrixButton.setStyleName(Reindeer.BUTTON_LINK);
 		similarityMatrixButton.setDescription("Similarity Matrix File");
@@ -2421,9 +2609,21 @@ public class RetrieveMarkersComponent  implements Component.Listener {
 			private static final long serialVersionUID = 1L;
 			@Override
 			public void buttonClick(ClickEvent event) {
+				
 				File similarityMatrixFile = new File(""); //TODO: Have to provide the File location
+				String[] cmd = {"cmd.exe", "/c", "start", "\""+"flapjack"+"\"", strSMVisualizeLink};
+				Runtime rtSM = Runtime.getRuntime();
+				try {
+					rtSM.exec(cmd);
+				
+				} catch (IOException e) {
+					_mainHomePage.getMainWindow().getWindow().showNotification("Error occurred while trying to create Similarity Matrix.", Notification.TYPE_ERROR_MESSAGE);
+					return;
+				}
+				
+				/*File similarityMatrixFile = new File(""); //TODO: Have to provide the File location
 				FileResource fileResource = new FileResource(similarityMatrixFile, _mainHomePage);
-				_mainHomePage.getMainWindow().getWindow().open(fileResource, "Similarity Matrix File", true);
+				_mainHomePage.getMainWindow().getWindow().open(fileResource, "Similarity Matrix File", true);*/
 			}
 		});
 		//20131216: Added link to download Similarity Matrix File

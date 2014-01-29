@@ -6,15 +6,15 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-
 import org.generationcp.middleware.dao.UserDAO;
-import org.generationcp.middleware.dao.gdms.MarkerDAO;
 import org.generationcp.middleware.exceptions.MiddlewareQueryException;
 import org.generationcp.middleware.hibernate.HibernateSessionProvider;
 import org.generationcp.middleware.manager.Database;
@@ -29,21 +29,25 @@ import org.generationcp.middleware.manager.api.GermplasmDataManager;
 import org.generationcp.middleware.pojos.Germplasm;
 import org.generationcp.middleware.pojos.Name;
 import org.generationcp.middleware.pojos.User;
-import org.generationcp.middleware.pojos.gdms.AccMetadataSet;
-import org.generationcp.middleware.pojos.gdms.AccMetadataSetPK;
-import org.generationcp.middleware.pojos.gdms.CharValues;
-import org.generationcp.middleware.pojos.gdms.Dataset;
-import org.generationcp.middleware.pojos.gdms.DatasetUsers;
+import org.generationcp.middleware.pojos.gdms.DatasetElement;
 import org.generationcp.middleware.pojos.gdms.Marker;
-import org.generationcp.middleware.pojos.gdms.MarkerMetadataSet;
 import org.generationcp.middleware.pojos.gdms.SNPDataRow;
 import org.generationcp.middleware.pojos.workbench.WorkbenchRuntimeData;
+import org.hibernate.Hibernate;
+import org.hibernate.SQLQuery;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.icrisat.gdms.common.GDMSException;
 import org.icrisat.gdms.ui.FieldProperties;
 import org.icrisat.gdms.ui.common.GDMSModel;
-
 import org.icrisat.gdms.upload.UploadMarker;
 import org.icrisat.gdms.upload.marker.UploadField;
+/*import org.generationcp.middleware.pojos.gdms.AccMetadataSet;
+import org.generationcp.middleware.pojos.gdms.AccMetadataSetPK;
+import org.generationcp.middleware.pojos.gdms.CharValues;
+import org.generationcp.middleware.pojos.gdms.Dataset;
+import org.generationcp.middleware.pojos.gdms.DatasetUsers;*/
+//import org.generationcp.middleware.pojos.gdms.MarkerMetadataSet;
 
 
 public class SNPGenotype  implements  UploadMarker {
@@ -62,15 +66,23 @@ public class SNPGenotype  implements  UploadMarker {
 	private ArrayList<String> listOfGIDsAndGNamesFromFile;
 	private ArrayList<String> listOfGIDsFromTheFile;
 	private ArrayList<String> listOfGNames;
-	private AccMetadataSet accMetadataSet;
-	private AccMetadataSet accMetadataSet1;
-	private MarkerMetadataSet markerMetadataSet;
-	private DatasetUsers datasetUser;
-	private CharValues charValues;
-	private Marker marker;
 	
-	private Marker addedMarker;
-	private Dataset dataset;
+	private AccessionMetaDataBean accMetadataSet;
+	private MarkerMetaDataBean markerMetadataSet;
+	private GenotypeUsersBean datasetUser;
+	
+	//private AccMetadataSet accMetadataSet;
+	//private AccMetadataSet accMetadataSet1;
+	//private MarkerMetadataSet markerMetadataSet;
+	//private DatasetUsers datasetUser;
+	//private CharValues charValues;
+	//private Marker marker;
+	
+	private MarkerInfoBean addedMarker;
+	private DatasetBean dataset;
+	
+	//private Marker addedMarker;
+	//private Dataset dataset;
 	private ArrayList<HashMap<String, String>> listOfDataRowsFromSourceTable;
 	private ArrayList<HashMap<String, String>> listOfDataRowsFromDataTable;
 	private ArrayList<HashMap<String, String>> listOfGIDRowsFromGIDTableForDArT;
@@ -88,8 +100,8 @@ public class SNPGenotype  implements  UploadMarker {
 	private Marker[] arrayOfMarkers;
 	
 	List<SNPDataRow> listOfSNPDataRows; 
-	GenotypicDataManager manager1=null;
-	
+	GenotypicDataManager genoManager;
+	GermplasmDataManager manager;
 	ArrayList<String> listOfMarkerNamesFromSourceTable = new ArrayList<String>();
 	
 	String strMarkerType="SNP";
@@ -101,8 +113,21 @@ public class SNPGenotype  implements  UploadMarker {
     String notMatchingData="";
     int size=0;
     String notMatchingGIDS="";
-    
-        
+    int intRMarkerId = 1;
+	int intRAccessionId = 1;
+	//String str=
+	int maxMid=0;
+	int mid=0;
+	String charData="";
+    private Session localSession;
+	private Session centralSession;
+	
+	private Session session;
+	private Transaction tx;
+	/*
+	private Session sessionL;
+	private Session sessionC;
+       */ 
     
     static Map<String, ArrayList<Integer>> hashMap = new HashMap<String,  ArrayList<Integer>>();
 	@Override
@@ -359,11 +384,21 @@ public class SNPGenotype  implements  UploadMarker {
 	public void createObjectsToBeSavedToDB() throws GDMSException {	
 		
 		HashMap<String, Integer> hashMapOfGNameandGID = new HashMap<String, Integer>();
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
 		
-		//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%  :"+GDMSModel.getGDMSModel().getLocalParams().);
-		GermplasmDataManager manager = factory.getGermplasmDataManager();
-		GenotypicDataManager manager1=factory.getGenotypicDataManager();
+		try{
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+		
+			manager = factory.getGermplasmDataManager();
+			genoManager=factory.getGenotypicDataManager();
+	
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+		
+		
 		ArrayList<Integer> listOfGIDFromTable = new ArrayList<Integer>();
 		ArrayList<String> listOfGNamesFromTable = new ArrayList<String>();
 		for (int i = 0; i < listOfDataRowsFromDataTable.size(); i++) {
@@ -377,7 +412,7 @@ public class SNPGenotype  implements  UploadMarker {
 			
 			//System.out.println("germplasm name=:"+hashMapOfDataRow.get(UploadField.Genotype.toString())+"      gid=:"+hashMapOfDataRow.get(UploadField.GID.toString()));
 		}
-
+		String marker="";
 		ArrayList<String> listOfMarkerNamesFromSourceTable = new ArrayList<String>();
 		for (int i = 0; i < listOfDataRowsFromDataTable.size(); i++){
 			HashMap<String,String> hashMapOfDataRow = listOfDataRowsFromDataTable.get(i);
@@ -388,10 +423,70 @@ public class SNPGenotype  implements  UploadMarker {
                     strMarkerNameFromSourceTable.equals(UploadField.Genotype.toString()))){
 					if( (false ==  listOfMarkerNamesFromSourceTable.contains(strMarkerNameFromSourceTable))&&(strMarkerNameFromSourceTable != "SNo")){
 						listOfMarkerNamesFromSourceTable.add(strMarkerNameFromSourceTable);
+						marker = marker +"'"+ strMarkerNameFromSourceTable+"',";
 					}
 				}
 			}
 		}
+		
+		List newListL=new ArrayList();
+		List newListC=new ArrayList();
+		//try {	
+		Object obj=null;
+		Object objL=null;
+		Iterator itListC=null;
+		Iterator itListL=null;
+		//genoManager.getMar
+		
+		List lstMarkers = new ArrayList();
+		String markersForQuery="";
+		/** retrieving maximum marker id from 'marker' table of database **/
+		//int maxMarkerId=uptMId.getMaxIdValue("marker_id","gdms_marker",session);
+		
+		HashMap<String, Object> markersMap = new HashMap<String, Object>();	
+		markersForQuery=marker.substring(0, marker.length()-1);
+		
+		String strQuerry="select distinct marker_id, marker_name from gdms_marker where Lower(marker_name) in ("+markersForQuery.toLowerCase()+")";
+		
+		//sessionC=centralSession.getSessionFactory().openSession();			
+		SQLQuery queryC=centralSession.createSQLQuery(strQuerry);	
+		queryC.addScalar("marker_id",Hibernate.INTEGER);	
+		queryC.addScalar("marker_name",Hibernate.STRING);	
+		newListC=queryC.list();			
+		itListC=newListC.iterator();			
+		while(itListC.hasNext()){
+			obj=itListC.next();
+			if(obj!=null){	
+				Object[] strMareO= (Object[])obj;
+	        	//System.out.println("W=....."+w+"    "+strMareO[0]+"   "+strMareO[1]);
+				lstMarkers.add(strMareO[1].toString());
+				markersMap.put(strMareO[1].toString(), strMareO[0]);
+				
+			}
+		}
+				
+
+		//sessionL=localSession.getSessionFactory().openSession();			
+		SQLQuery queryL=localSession.createSQLQuery(strQuerry);		
+		queryL.addScalar("marker_id",Hibernate.INTEGER);	
+		queryL.addScalar("marker_name",Hibernate.STRING);      
+		newListL=queryL.list();
+		itListL=newListL.iterator();			
+		while(itListL.hasNext()){
+			objL=itListL.next();
+			if(objL!=null)	{			
+				Object[] strMareO= (Object[])objL;
+				//System.out.println("W=....."+w+"    "+strMareO[0]+"   "+strMareO[1]);
+				if(!lstMarkers.contains(strMareO[1].toString())){
+            		lstMarkers.add(strMareO[1].toString());	            		
+            		markersMap.put(strMareO[1].toString(), strMareO[0]);	
+				}
+			}
+		}
+		
+		
+		 // System.out.println("lstMarkers=:"+lstMarkers);
+		
 		ArrayList gidsDBList = new ArrayList();
 		ArrayList gNamesDBList = new ArrayList();
 		hashMap.clear();
@@ -454,10 +549,10 @@ public class SNPGenotype  implements  UploadMarker {
 	    	throw new GDMSException("The following Germplasm(s) provided do not exist in the database. \n Please upload the relevant germplasm information through the Fieldbook \n \t"+notMatchingGIDS+" \n Please verify the name(s) provided "+notMatchingData+" which do not match the GIDS(s) present in the database "+notMatchingDataDB);	 	  
 	    }
 		
-		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
+		/*GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
 		HibernateSessionProvider hibernateSessionProviderForLocal = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal();
 		genotypicDataManagerImpl.setSessionProviderForLocal(hibernateSessionProviderForLocal);
-		genotypicDataManagerImpl.setSessionProviderForCentral(null);
+		genotypicDataManagerImpl.setSessionProviderForCentral(null);*/
 		ArrayList<String> listOfGermplasmNames = new ArrayList<String>();
 		HashMap<Integer, String> hashMapOfGIDandGName = new HashMap<Integer, String>();
 		//HashMap<String, Integer> hashMapOfGNameandGID = new HashMap<String, Integer>();
@@ -467,6 +562,8 @@ public class SNPGenotype  implements  UploadMarker {
 		Name names = null;
 		ArrayList gidL=new ArrayList();
 		List<Integer> nameIdsByGermplasmIds =new ArrayList();
+		ArrayList finalList =new ArrayList();
+		//ArrayList gidL=new ArrayList();
 		for(int n=0;n<listOfGIDFromTable.size();n++){
 		try {
 			names = manager.getNameByGIDAndNval(Integer.parseInt(listOfGIDFromTable.get(n).toString()), listOfGNamesFromTable.get(n).toString(), GetGermplasmByNameModes.STANDARDIZED);
@@ -485,7 +582,12 @@ public class SNPGenotype  implements  UploadMarker {
 				throw new GDMSException(e1.getMessage());
 			}
 		}
-		
+		for(int a=0;a<listOfGIDFromTable.size();a++){
+        	int gid1=Integer.parseInt(listOfGIDFromTable.get(a).toString());
+        	if(gidL.contains(gid1)){
+        		finalList.add(gid1+"~!~"+hashMapOfGIDsandNIDs.get(gid1));	
+        	}
+        }
 			
 			/** 
 			 * 20130813
@@ -500,7 +602,7 @@ public class SNPGenotype  implements  UploadMarker {
 			//20130813
 			
 			
-			try{
+			/*try{
 			MarkerDAO markerDAO = new MarkerDAO();
 			markerDAO.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
 			long countAll = markerDAO.countAll();
@@ -508,7 +610,7 @@ public class SNPGenotype  implements  UploadMarker {
 			List<Integer> listOfMarkerIdsByMarkerNames = markerDAO.getIdsByNames(listOfMarkerNamesFromSourceTable, 0, (int)countAll);
 			listOfMarkersFromDB = markerDAO.getMarkersByIds(listOfMarkerIdsByMarkerNames, 0, (int)countAll);
 			
-			/** 
+			*//** 
 			 * 20130813
 			 *//*
 			if (null == listOfMarkersFromDB){
@@ -519,7 +621,7 @@ public class SNPGenotype  implements  UploadMarker {
 				throw new GDMSException("Markers do not exist for given Marker-Names. Please provide valid Marker-Names.");
 			}
 			//20130813
-*/			
+			
 			for (Marker marker : listOfMarkersFromDB){
 				String strMarkerName = marker.getMarkerName();
 				Integer markerId = marker.getMarkerId();
@@ -531,7 +633,7 @@ public class SNPGenotype  implements  UploadMarker {
 			throw new GDMSException(e.getMessage());
 		} catch (MiddlewareQueryException e) {
 			throw new GDMSException(e.getMessage());
-		}
+		}*/
 
 		//Integer iDatasetId = 0; //Will be set/overridden by the function
 		String strDataType = "char"; 
@@ -554,16 +656,16 @@ public class SNPGenotype  implements  UploadMarker {
 		int marker_id=0;
 		Database instance = Database.LOCAL;
 		/*try{
-			long lastId = manager1.getLastId(instance, GdmsTable.GDMS_MARKER);
+			long lastId = genoManager.getLastId(instance, GdmsTable.GDMS_MARKER);
 			//System.out.println("testGetLastId(" + GdmsTable.GDMS_MARKER + ") in " + instance + " = " + lastId);
 			marker_id=(int)lastId;
 			
 		}catch (MiddlewareQueryException e) {
 			throw new GDMSException("Error uploading Genotyping Data");
 		} */
-		ArrayList finalList =new ArrayList();
+		//ArrayList finalList =new ArrayList();
 		Integer iUserId = 0;
-		if (null == strPIFromSourceTable || strPIFromSourceTable.equals("")){
+		/*if (null == strPIFromSourceTable || strPIFromSourceTable.equals("")){
 			WorkbenchDataManagerImpl workbenchDataManagerImpl = new WorkbenchDataManagerImpl(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
 			WorkbenchRuntimeData workbenchRuntimeData;
 			try {
@@ -578,9 +680,9 @@ public class SNPGenotype  implements  UploadMarker {
 				throw new GDMSException(e.getMessage());
 			}
 
-		} else {
+		} else {*/
 			UserDAO userDAO = new UserDAO();
-			userDAO.setSession(hibernateSessionProviderForLocal.getSession());
+			userDAO.setSession(localSession);
 			List<User> listOfAllUsers =  null;
 			try {
 				listOfAllUsers = userDAO.getAll();
@@ -594,121 +696,272 @@ public class SNPGenotype  implements  UploadMarker {
 			} catch (MiddlewareQueryException e) {
 				throw new GDMSException(e.getMessage());
 			}
+		//}
+		try{
+			List<DatasetElement> results =genoManager.getDatasetDetailsByDatasetName(strDatasetNameFromSourceTable, Database.CENTRAL);
+			if(results.isEmpty()){			
+				results =genoManager.getDatasetDetailsByDatasetName(strDatasetNameFromSourceTable, Database.LOCAL);
+				if(results.size()>0)
+					throw new GDMSException("Dataset Name already exists.");
+			}else 
+				throw new GDMSException("Dataset Name already exists.");
+		
+		} catch (MiddlewareQueryException e) {
+			throw new GDMSException(e.getMessage());
 		}
-
+		
+		if(strDatasetNameFromSourceTable.length()>30){
+			//ErrMsg = "Dataset Name value exceeds max char size.";
+			throw new GDMSException("Dataset Name value exceeds max char size.");
+		}
 		
 		int iUploadedMarkerCount = 0;
 		
 		//System.out.println("listOfDataRowsFromDataTable:"+listOfDataRowsFromDataTable);
-		
+		 
+		 long datasetLastId = 0;
+		 long lastId = 0;
+		 
 		int iNumOfMarkers = listOfMarkerNamesFromSourceTable.size();
 		int iNumOfGIDs = listOfGIDFromTable.size();
 		arrayOfMarkers = new Marker[iNumOfMarkers*iNumOfGIDs];
-		Integer iDatasetId = 0;
-
+		int iDatasetId = 0;
+		 tx=localSession.beginTransaction();
+		 
+		 /** retrieving maximum marker id from 'marker' table of database **/
+			try{
+				lastId = genoManager.getLastId(Database.LOCAL, GdmsTable.GDMS_MARKER);
+			}catch (MiddlewareQueryException e) {
+				throw new GDMSException(e.getMessage());
+			}
+			maxMid=(int)lastId; 
+		 
+			String mon="";
+			Calendar cal = new GregorianCalendar();
+			int month = cal.get(Calendar.MONTH);
+			int year = cal.get(Calendar.YEAR);
+			int day = cal.get(Calendar.DAY_OF_MONTH);
+			if(month>=10) 
+				mon=String.valueOf(month+1);
+			else 
+				mon="0"+(month+1);
+			  
+			 String curDate=year+"-"+mon+"-"+day;
+			
+			 
+			 try{
+				 datasetLastId = genoManager.getLastId(Database.LOCAL, GdmsTable.GDMS_DATASET);
+				}catch (MiddlewareQueryException e) {
+					throw new GDMSException(e.getMessage());
+				}
+				int intDatasetId=(int)datasetLastId;
+				
+				iDatasetId=intDatasetId-1;
+		 
+				long lastIdMPId=0;
+				try{
+					lastIdMPId = genoManager.getLastId(Database.LOCAL, GdmsTable.GDMS_CHAR_VALUES);
+				}catch (MiddlewareQueryException e) {
+					throw new GDMSException(e.getMessage());
+				}
+				int maxCHid=(int)lastIdMPId;
+				iACId=maxCHid;
+		 
+		 
+		 
+		 
+		 
 		
-		dataset = new Dataset();
-		//dataset.setDatasetId(iDatasetId);
-		dataset.setDatasetName(strDatasetNameFromSourceTable);
-		dataset.setDatasetDesc(strDatasetDescFromSourceTable);
-		dataset.setDatasetType(strDatasetType);
+		dataset = new DatasetBean();
+		dataset.setDataset_id(iDatasetId);
+		dataset.setDataset_name(strDatasetNameFromSourceTable);
+		dataset.setDataset_desc(strDatasetDescFromSourceTable);
+		dataset.setDataset_type(strDatasetType);
 		dataset.setGenus(strGenusFromSourceTable);
 		dataset.setSpecies(strSpeciesFromSourceTable);
-		dataset.setUploadTemplateDate(uploadTemplateDate);
+		dataset.setUpload_template_date(curDate);
 		dataset.setRemarks(strRemarks);
-		dataset.setDataType(strDataType);
-		dataset.setMissingData(strMissingDataFromSourceTable);
+		dataset.setDatatype(strDataType);
+		dataset.setMissing_data(strMissingDataFromSourceTable);
 		dataset.setMethod(method);
 		dataset.setScore(strScore);
+		localSession.save(dataset);
 		
+		datasetUser = new GenotypeUsersBean();
+		datasetUser.setDataset_id(iDatasetId);
+		datasetUser.setUser_id(iUserId);
+		localSession.save(datasetUser);
 		
-		datasetUser = new DatasetUsers(iDatasetId, iUserId);
-		
-		
-		listOfSNPDataRows = new ArrayList<SNPDataRow>();
-		
-		//System.out.println("listOfMarkerNamesFromSourceTable:"+listOfMarkerNamesFromSourceTable);
-		
-		for (int i = 0; i < listOfDataRowsFromDataTable.size(); i++){
+		for(int i=0;i<finalList.size();i++){	
+        	String[] strList=finalList.get(i).toString().split("~!~");
+        	accMetadataSet=new AccessionMetaDataBean();					
+			//******************   GermplasmTemp   *********************//*	
+        	accMetadataSet.setDataset_id(iDatasetId);
+        	accMetadataSet.setGid(Integer.parseInt(strList[0].toString()));
+        	accMetadataSet.setNid(Integer.parseInt(strList[1].toString()));
 			
-			HashMap<String, String> hashMapOfDataRow = listOfDataRowsFromDataTable.get(i);
-			//System.out.println("hashMapOfDataRow:"+hashMapOfDataRow);
-			//System.out.println("hashMapOfDataRow.get(UploadField.GID.toString()):"+hashMapOfDataRow.get(UploadField.GID.toString()));
-						
-			String strGID = hashMapOfDataRow.get(UploadField.GID.toString());
+        	localSession.save(accMetadataSet);
 			
-			//System.out.println("hashMapOfGIDsandNIDs.get(Integer.parseInt(strGID)):"+hashMapOfGIDsandNIDs.get(Integer.parseInt(strGID)));
-			
-			Integer iNameId = hashMapOfGIDsandNIDs.get(Integer.parseInt(strGID));
-			int datasetId = -10;
-			accMetadataSet1 = new AccMetadataSet(new AccMetadataSetPK(datasetId, Integer.parseInt(strGID), iNameId));	
-			
-			//System.out.println("hashMapOfDataRow.get(UploadField.Genotype.toString()):"+hashMapOfDataRow.get(UploadField.Genotype.toString()));
-			String strGenotype = hashMapOfDataRow.get(UploadField.Genotype.toString());
-			//System.out.println("nids=:"+hashMapOfGIDsandNIDs);
-			//System.out.println(strGID+"   "+hashMapOfGIDsandNIDs.get(Integer.parseInt(strGID)));
-			//Integer iNameId = hashMapOfGIDsandNIDs.get(Integer.parseInt(strGID));
-			
-		
-			
-			
-			//System.out.println("Gid=:"+strGID);
-			for (int j = 0; j < listOfMarkerNamesFromSourceTable.size(); j++) {		
+			if (i % 1 == 0){
+				localSession.flush();
+				localSession.clear();
+			}
+        
+        }
+		 ArrayList mids=new ArrayList();
+         
+         HashMap<String, Object> finalHashMapMarkerAndIDs = new HashMap<String, Object>();
+       
+		for(int f=0; f<listOfMarkerNamesFromSourceTable.size();f++){
+			MarkerInfoBean mib=new MarkerInfoBean();
+			if(lstMarkers.contains(listOfMarkerNamesFromSourceTable.get(f))){
+				intRMarkerId=(Integer)(markersMap.get(listOfMarkerNamesFromSourceTable.get(f)));							
+				mids.add(intRMarkerId);
+				finalHashMapMarkerAndIDs.put(listOfMarkerNamesFromSourceTable.get(f).toString(), intRMarkerId);
+			}else{
+				//maxMid=maxMid+1;
+				maxMid=maxMid-1;
+				intRMarkerId=maxMid;
+				finalHashMapMarkerAndIDs.put(listOfMarkerNamesFromSourceTable.get(f).toString(), intRMarkerId);
+				mids.add(intRMarkerId);	
+				mib.setMarkerId(intRMarkerId);
+				mib.setMarker_type("SNP");
+				mib.setMarker_name(listOfMarkerNamesFromSourceTable.get(f).toString());
+				//mib.setCrop(sheetSource.getCell(1,5).getContents());
+				mib.setSpecies(strSpeciesFromSourceTable);
 				
-					strCharValue=hashMapOfDataRow.get(listOfMarkerNamesFromSourceTable.get(j));
-					
-					String strMarkerName = listOfMarkerNamesFromSourceTable.get(j);		
-					//System.out.println("Nid=:"+ hashMapOfGIDsandNIDs.get(Integer.parseInt(strGID))  +"GID=:"+strGID+"marker:"+strMarkerName +" Allele value="+ strCharValue);
-					int MID=0;
-					
-					addedMarker= new Marker();
-					addedMarker.setMarkerName(strMarkerName);
-					addedMarker.setSpecies("groundnut");
-																				
-					//markerMetadataSet = new MarkerMetadataSet(new MarkerMetadataSetPK(datasetId, MID));
-					markerMetadataSet = new MarkerMetadataSet(null, 0);
-					
-
-					charValues = new CharValues();
-					charValues.setAcId(iACId);
-					charValues.setgId(Integer.parseInt(strGID));
-					charValues.setCharValue(strCharValue);
-					
-				
-					SNPDataRow snpDataRow = new SNPDataRow(addedMarker, accMetadataSet1, markerMetadataSet, charValues);
-					listOfSNPDataRows.add(snpDataRow);
-						
+				localSession.save(mib);
+				if (f % 1 == 0){
+					localSession.flush();
+					localSession.clear();
 				}
+			}
 			
 			
 		}
 		
-		saveSNPGenotype();
+		
+		//listOfSNPDataRows = new ArrayList<SNPDataRow>();
+		//System.out.println("listOfDataRowsFromDataTable=:"+listOfDataRowsFromDataTable);
+		for (int i = 0; i < listOfDataRowsFromDataTable.size(); i++){			
+			HashMap<String, String> hashMapOfDataRow = listOfDataRowsFromDataTable.get(i);						
+			String strGID = hashMapOfDataRow.get(UploadField.GID.toString());
+			/*Integer iNameId = hashMapOfGIDsandNIDs.get(Integer.parseInt(strGID));
+			int datasetId = -10;*/
+			iACId--;
+			//accMetadataSet1 = new AccMetadataSet(new AccMetadataSetPK(datasetId, Integer.parseInt(strGID), iNameId));	
+			String strGenotype = hashMapOfDataRow.get(UploadField.Genotype.toString());			
+			for (int j = 0; j < listOfMarkerNamesFromSourceTable.size(); j++) {					
+				strCharValue=hashMapOfDataRow.get(listOfMarkerNamesFromSourceTable.get(j));					
+				String strMarkerName = listOfMarkerNamesFromSourceTable.get(j);							
+				
+				CharArrayBean charValues=new CharArrayBean();
+				CharArrayCompositeKey cack = new CharArrayCompositeKey();
+				
+				//**************** writing to char_values tables........
+				cack.setDataset_id(iDatasetId);
+				cack.setAc_id(iACId);
+				charValues.setComKey(cack);
+				charValues.setGid(Integer.parseInt(strGID));
+				
+				if(strCharValue.length()>2){
+					String charStr=strCharValue;
+					if(charStr.contains(":")){
+						String str1="";
+						String str2="";
+						//String charStr=str.get(s);
+						str1=charStr.substring(0, charStr.length()-2);
+						str2=charStr.substring(2, charStr.length());
+						charData=str1+"/"+str2;
+					}else if(charStr.contains("/")){
+						charData=charStr;
+					}else{
+						
+						throw new GDMSException("Heterozygote data representation should be either : or /");
+						/*
+						 ErrMsg = "Heterozygote data representation should be either : or /";
+						 request.getSession().setAttribute("indErrMsg", ErrMsg);
+						 return "ErrMsg";*/	 
+					}
+					
+				}else if(strCharValue.length()==2){
+					String str1="";
+					String str2="";
+					String charStr=strCharValue;
+					str1=charStr.substring(0, charStr.length()-1);
+					str2=charStr.substring(1);
+					charData=str1+"/"+str2;
+					//System.out.println(".....:"+str.get(s).substring(1));
+				}else if(strCharValue.length()==1){
+					if(strCharValue.equalsIgnoreCase("A")){
+						charData="A/A";	
+					}else if(strCharValue.equalsIgnoreCase("C")){	
+						charData="C/C";
+					}else if(strCharValue.equalsIgnoreCase("G")){
+						charData="G/G";
+					}else if(strCharValue.equalsIgnoreCase("T")){
+						charData="T/T";
+					}else{
+						charData=strCharValue;
+					}							
+				}
+				
+				
+				charValues.setChar_value(charData);
+				charValues.setMarker_id(Integer.parseInt(finalHashMapMarkerAndIDs.get(strMarkerName).toString()));
+			
+				localSession.save(charValues);
+				
+				if (j % 1 == 0){
+					localSession.flush();
+					localSession.clear();
+				}
+				iACId--;
+			}
+			
+			
+		}
+		
+		for(int m1=0;m1<mids.size();m1++){					
+			//System.out.println("gids doesnot Exists    :"+lstgermpName+"   "+gids[l]);
+			MarkerMetaDataBean mdb=new MarkerMetaDataBean();					
+			//******************   GermplasmTemp   *********************//*	
+			mdb.setDataset_id(iDatasetId);
+			mdb.setMarker_id(Integer.parseInt(mids.get(m1).toString()));
+			
+			localSession.save(mdb);
+			if (m1 % 1 == 0){
+				localSession.flush();
+				localSession.clear();
+			}			
+		}	
+		
+		tx.commit();
 	}
 
-	protected void saveSNPGenotype() throws GDMSException {
+	/*protected void saveSNPGenotype() throws GDMSException {
 		
 		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
 		
-		manager1=factory.getGenotypicDataManager();
+		genoManager=factory.getGenotypicDataManager();
 		try {
-			//manager1.setSNP(accMetadataSet1, markerMetadataSet, datasetUser, charValues, dataset, addedMarker);
+			//genoManager.setSNP(accMetadataSet1, markerMetadataSet, datasetUser, charValues, dataset, addedMarker);
 			//genotypicDataManagerImpl.setSNP(accMetadataSet, markerMetadataSet, datasetUser, charValues, dataset);
 			
-			/*setSNP(Dataset dataset,
+			setSNP(Dataset dataset,
 		               DatasetUsers datasetUser,
 		               List<SNPDataRow> rows)
-		               throws MiddlewareQueryException*/
+		               throws MiddlewareQueryException
 			
 			//20131214: Tulasi
-			manager1.setSNP(dataset, datasetUser, listOfSNPDataRows);
+			genoManager.setSNP(dataset, datasetUser, listOfSNPDataRows);
 		               
 		} catch (MiddlewareQueryException e) {
 			throw new GDMSException("Error uploading SNP Genotype");
 		} catch (Throwable th){
 			throw new GDMSException("Error uploading SNP Genotype", th);
 		}
-	}
+	}*/
 
 	@Override
 	public void setListOfColumns(ArrayList<FieldProperties> theListOfColumnsInTheTable) {

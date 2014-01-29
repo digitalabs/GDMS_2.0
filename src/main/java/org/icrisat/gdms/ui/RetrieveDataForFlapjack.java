@@ -12,10 +12,8 @@ import java.util.TreeMap;
 import org.generationcp.middleware.dao.NameDAO;
 import org.generationcp.middleware.dao.gdms.AccMetadataSetDAO;
 import org.generationcp.middleware.dao.gdms.AlleleValuesDAO;
-import org.generationcp.middleware.dao.gdms.CharValuesDAO;
 import org.generationcp.middleware.dao.gdms.MappingDataDAO;
 import org.generationcp.middleware.dao.gdms.MappingPopDAO;
-import org.generationcp.middleware.dao.gdms.MappingPopValuesDAO;
 import org.generationcp.middleware.dao.gdms.MarkerDAO;
 import org.generationcp.middleware.dao.gdms.MarkerMetadataSetDAO;
 import org.generationcp.middleware.dao.gdms.QtlDAO;
@@ -33,6 +31,7 @@ import org.generationcp.middleware.pojos.gdms.MapInfo;
 import org.generationcp.middleware.pojos.gdms.MappingData;
 import org.generationcp.middleware.pojos.gdms.MappingPopValues;
 import org.generationcp.middleware.pojos.gdms.Marker;
+import org.generationcp.middleware.pojos.gdms.MarkerIdMarkerNameElement;
 import org.generationcp.middleware.pojos.gdms.ParentElement;
 import org.generationcp.middleware.pojos.gdms.Qtl;
 import org.generationcp.middleware.pojos.gdms.QtlDetailElement;
@@ -117,7 +116,7 @@ public class RetrieveDataForFlapjack {
 	
 	
 	
-	//List<Integer> markers=new ArrayList();
+	//List<Integer> markers=new ArrayList();;
 	int parentANid=0;
 	int parentBNid=0;
 	
@@ -137,12 +136,18 @@ public class RetrieveDataForFlapjack {
 	GermplasmDataManager germManager;
 	public RetrieveDataForFlapjack(GDMSMain theMainHomePage){
 		_mainHomePage = theMainHomePage;
-		localSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
-		centralSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
-		
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		genoManager=factory.getGenotypicDataManager();
-		germManager=factory.getGermplasmDataManager();
+		try{
+			//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+			genoManager=factory.getGenotypicDataManager();
+			germManager=factory.getGermplasmDataManager();
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 	}
 
 	public void setGenotypingType(String theGenotypingType) {
@@ -174,12 +179,12 @@ public class RetrieveDataForFlapjack {
 	public void retrieveFlapjackData() {
 
 		bFlapjackDataBuiltSuccessfully = false;
-		//System.out.println("strGenotypingType=:"+strGenotypingType);
+		////System.out.println("strGenotypingType=:"+strGenotypingType);
 		if (strGenotypingType.equalsIgnoreCase("Dataset")){
 
-			/*System.out.println("RetrieveDataForFlapjack --- retrieveFlapjackData():");
-			System.out.println("DatasetName: " + strDatasetName + " --- " + "Dataset-ID: " + strDatasetID + " --- " +
-					"Dataset-Type:" + strDatasetType);*/
+			////System.out.println("RetrieveDataForFlapjack --- retrieveFlapjackData():");
+			////System.out.println("DatasetName: " + strDatasetName + " --- " + "Dataset-ID: " + strDatasetID + " --- " +
+//					"Dataset-Type:" + strDatasetType);
 
 			listOfDatasetIDs = new ArrayList<Integer>();
 			listOfDatasetIDs.add(Integer.parseInt(strDatasetID));
@@ -196,7 +201,7 @@ public class RetrieveDataForFlapjack {
 				if (strDatasetType.equalsIgnoreCase("mapping")){
 
 					retrieveParentAandParentBGIDs();
-					//System.out.println("strMappingType=   :"+strMappingType);
+					////System.out.println("strMappingType=   :"+strMappingType);
 					if (strMappingType.equalsIgnoreCase("allelic")){
 						retrieveNIDsUsingTheParentGIDsList();
 					} 
@@ -204,13 +209,9 @@ public class RetrieveDataForFlapjack {
 					retrieveNIDsUsingDatasetID();
 					markersL= genoManager.getMarkerIdsByDatasetId(Integer.parseInt(strDatasetID));
 					
-					if (strMappingType.equalsIgnoreCase("allelic")){
-						retrieveParentGIDsAndGNamesForAllelicType();
-						
-						
-						
-						
-					} else {
+					/*if (strMappingType.equalsIgnoreCase("allelic")){
+						retrieveParentGIDsAndGNamesForAllelicType();						
+					} else {*/
 						Name namesA = null;
 						Name namesB = null;						
 						parentsGIDsNames= new HashMap<Integer, String>();
@@ -233,7 +234,7 @@ public class RetrieveDataForFlapjack {
 						}
 						
 						retrieveGermplasmNamesByGIDs();
-					}
+					//}
 
 					if(strMappingType.equalsIgnoreCase("allelic")){
 						retrieveAllelicValuesBasedOnMarkerType();
@@ -241,18 +242,29 @@ public class RetrieveDataForFlapjack {
 
 				} else{
 					//If strDatasetType is not equal to mapping 
-					//System.out.println("Dataset Type is not mapping.");
+					////System.out.println("Dataset Type is not mapping.");
 					markersL= genoManager.getMarkerIdsByDatasetId(Integer.parseInt(strDatasetID));
 					retrieveGermplasmNamesByGIDs();
 					retrieveNIDsFor_SSR_SNP_DArt_DataTypes();
 				}
-
+				hmOfMIDandMNames = new HashMap<Integer, String>();
+				listOfMarkerNames = new ArrayList<String>();
+				listOfMarkersForGivenGermplasmRetrieval=new ArrayList<String>();
+				List<MarkerIdMarkerNameElement> markerNames =genoManager.getMarkerNamesByMarkerIds(markersL);
+				for (MarkerIdMarkerNameElement e : markerNames) {
+		            //Debug.println(0, e.getMarkerId() + " : " + e.getMarkerName());
+					if(!listOfMarkerNames.contains(e.getMarkerName())){
+						listOfMarkersForGivenGermplasmRetrieval.add(e.getMarkerName());
+						listOfMarkerNames.add(e.getMarkerName());
+						hmOfMIDandMNames.put(e.getMarkerId(), e.getMarkerName());
+					}
+		        }
 				//Trying to retrieve Germplasm Names with the listOfGIDs obtained till now
 				retrieveGermplasmNames();
 
-				//System.out.println("select marker_id, marker_name from marker where marker_id in("+ mid.substring(0,mid.length()-1) +") order by marker_id ASC");
+				//////System.out.println("select marker_id, marker_name from marker where marker_id in("+ mid.substring(0,mid.length()-1) +") order by marker_id ASC");
 				//rsM=stmtM.executeQuery("select marker_id, marker_name from gdms_marker where marker_id in("+ mid.substring(0,mid.length()-1) +") order by marker_id ASC");
-				retrieveMarkersForMarkerIDs();
+				//retrieveMarkersForMarkerIDs();
 
 				if(strDatasetType.equalsIgnoreCase("SNP")){
 					retrieveValuesForSNPDatasetType();
@@ -278,7 +290,7 @@ public class RetrieveDataForFlapjack {
 					}
 					sortedMapOfGIDsAndGNames.put(gid, gname);
 				}
-				//System.out.println("Size of Sorted Map of GIDs and GNames: " + sortedMapOfGIDsAndGNames.size()+"   "+sortedMapOfGIDsAndGNames);
+				////System.out.println("Size of Sorted Map of GIDs and GNames: " + sortedMapOfGIDsAndGNames.size()+"   "+sortedMapOfGIDsAndGNames);
 
 
 				sortedMapOfMIDsAndMNames = new TreeMap<Integer, String>();
@@ -289,7 +301,7 @@ public class RetrieveDataForFlapjack {
 					String mname = hmOfMIDandMNames.get(mid);
 					sortedMapOfMIDsAndMNames.put(mid, mname);
 				}
-				//System.out.println("Size of Sorted Map of MIDs and MNames: " + sortedMapOfMIDsAndMNames.size());
+				////System.out.println("Size of Sorted Map of MIDs and MNames: " + sortedMapOfMIDsAndMNames.size());
 
 				//listOfGIDsToBeExported to be used if exporting based on GIDs
 				if (strSelectedExportType.equalsIgnoreCase("GIDs")){
@@ -336,12 +348,12 @@ public class RetrieveDataForFlapjack {
 				retrieveMapDataForFlapjack();
 
 				retrieveQTLDataForFlapjack();
-				//System.out.println("listOfGIDsToBeExported=:"+listOfGNamesToBeExported);
+				////System.out.println("listOfGIDsToBeExported=:"+listOfGNamesToBeExported);
 
 				bFlapjackDataBuiltSuccessfully = true;
 
 				ExportFlapjackFileFormats exportFlapjackFileFormats = new ExportFlapjackFileFormats();
-				//System.out.println("intAlleleValues=:"+intAlleleValues);
+				//////System.out.println("intAlleleValues=:"+intAlleleValues);
 				if (strSelectedExportType.equalsIgnoreCase("GIDs")){
 					if (strDatasetType.equalsIgnoreCase("SNP")){
 						exportFlapjackFileFormats.generateFlapjackDataFilesByGIDs(_mainHomePage, intAlleleValues, listOfAllMapInfo, listOfGIDsToBeExported, listOfMarkerNames, sortedMapOfMIDsAndMNames, listOfAllQTLDetails, hmOfQtlPosition, hmOfQtlNameId, hmOfQtlIdandName, strSelectedExportType, bQTLExists, strDatasetType);
@@ -378,8 +390,10 @@ public class RetrieveDataForFlapjack {
 
 		} else {
 
-			if (strGenotypingType.equalsIgnoreCase("Germplasm Names") || strGenotypingType.equalsIgnoreCase("GIDs")){
-				markersL=new ArrayList();
+			
+				if (strGenotypingType.equalsIgnoreCase("Germplasm Names") || strGenotypingType.equalsIgnoreCase("GIDs") ||
+						strGenotypingType.equalsIgnoreCase("Markers")){
+					markersL=new ArrayList();
 					try {
 						
 						retrieveNIDsForGivenGIDs();
@@ -407,7 +421,17 @@ public class RetrieveDataForFlapjack {
 							sortedMapOfGIDsAndGNames.put(gid, gname);
 						}
 						TreeMap<String, Integer> sortedMapOfGNamesAndGIDs = new TreeMap<String,Integer>(hmOfNvalAndGIds);
-						//System.out.println("Size of Sorted Map of GIDs and GNames: " + sortedMapOfGIDsAndGNames.size());
+						
+						/*sortedMapOfGNamesAndGIDs = new TreeMap<String, Integer>();
+						Set<String> gidKeySetN = hmOfNvalAndGIds.keySet();
+						Iterator<Integer> gidIteratorN = gidKeySetN.iterator();
+						while (gidIteratorN.hasNext()) {
+							Integer gid = gidIteratorN.next();
+							String gname = hmOfGIdsAndNval.get(gid);
+							sortedMapOfGIDsAndGNames.put(gid, gname);
+						}*/
+						
+						////System.out.println("Size of Sorted Map of GIDs and GNames: " + sortedMapOfGIDsAndGNames.size());
 
 
 						sortedMapOfMIDsAndMNames = new TreeMap<Integer, String>();
@@ -418,7 +442,7 @@ public class RetrieveDataForFlapjack {
 							String mname = hmOfMIDandMNames.get(mid);
 							sortedMapOfMIDsAndMNames.put(mid, mname);
 						}
-						//System.out.println("Size of Sorted Map of MIDs and MNames: " + sortedMapOfMIDsAndMNames.size());
+						////System.out.println("Size of Sorted Map of MIDs and MNames: " + sortedMapOfMIDsAndMNames.size());
 
 						//listOfGIDsToBeExported to be used if exporting based on GIDs
 						if (strSelectedExportType.equalsIgnoreCase("GIDs")){
@@ -442,36 +466,36 @@ public class RetrieveDataForFlapjack {
 								}
 							}
 						}
-						//System.out.println("listOfMIDsForGivenGermplasmRetrieval=:"+listOfMIDsForGivenGermplasmRetrieval);
+						////System.out.println("listOfMIDsForGivenGermplasmRetrieval=:"+listOfMIDsForGivenGermplasmRetrieval);
 						markersL=new ArrayList();
-						//System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  :"+listOfMarkersForGivenGermplasmRetrieval);
+						////System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  :"+listOfMarkersForGivenGermplasmRetrieval);
 						if(null != listOfMIDsForGivenGermplasmRetrieval){
-							//System.out.println("null *********************************************** mlist");
+							////System.out.println("null *********************************************** mlist");
 							for(int m=0; m<listOfMIDsForGivenGermplasmRetrieval.size();m++){
 								if(listOfMIDsForGivenGermplasmRetrieval.get(m)!=null)
 								markersL.add(listOfMIDsForGivenGermplasmRetrieval.get(m));
 							}
 						}
-						//System.out.println("markersL=:"+markersL.size()+"   "+markersL);
-						if(markersL.size()==1){
-							//System.out.println("if m empty ");
+						////System.out.println("markersL=:"+markersL.size()+"   "+markersL);
+						if(markersL.isEmpty()){
+							////System.out.println("if m empty ");
 							List<Integer> markerIds =genoManager.getMarkerIdsByMarkerNames(listOfMarkersForGivenGermplasmRetrieval, 0, listOfMarkersForGivenGermplasmRetrieval.size(), Database.CENTRAL);
 							List<Integer> markerIdsL =genoManager.getMarkerIdsByMarkerNames(listOfMarkersForGivenGermplasmRetrieval, 0, listOfMarkersForGivenGermplasmRetrieval.size(), Database.LOCAL);
 							if(!(markerIds.isEmpty())){
-								//System.out.println("M from central not empty");
+								////System.out.println("M from central not empty");
 								for(int m=0; m<markerIds.size();m++){
 									markersL.add(markerIds.get(m));
 								}
 							}
 							if(!(markerIdsL.isEmpty())){
-								//System.out.println("MLK not Empty");
+								////System.out.println("MLK not Empty");
 								for(int ml=0; ml<markerIdsL.size();ml++){
 									markersL.add(markerIdsL.get(ml));
 								}
 							}
 							
 						}
-						//System.out.println("markers=:"+markersL);
+						////System.out.println("markers=:"+markersL);
 						retrieveMapDataForFlapjack();
 
 						retrieveQTLDataForFlapjack();
@@ -488,6 +512,7 @@ public class RetrieveDataForFlapjack {
 							exportFlapjackFileFormats.generateFlapjackDataFilesByGermplasmNames(_mainHomePage, listOfAllMapInfo, listOfGNamesToBeExported, listOfMarkersForGivenGermplasmRetrieval, sortedMapOfMIDsAndMNames, sortedMapOfGNamesAndGIDs, listOfAllQTLDetails, hmOfQtlPosition, hmOfQtlNameId, hmOfQtlIdandName, strSelectedExportType, bQTLExists, mapEx);
 							
 						}
+						
 						
 						generatedTextFile = exportFlapjackFileFormats.getGeneratedTextFile();
 						generatedMapFile = exportFlapjackFileFormats.getGeneratedMapFile();
@@ -553,16 +578,17 @@ public class RetrieveDataForFlapjack {
 
 	}*/
 
+
 	private void retrieveDataForFlapjackFormat() throws MiddlewareQueryException {
 		ArrayList glist = new ArrayList();
 		ArrayList midslist = new ArrayList();
 		String data="";
-		/*System.out.println("listOfMarkersSelected=:"+listOfMarkersForGivenGermplasmRetrieval);
-		System.out.println("listOfGIDsSelected:"+listOfGIDs);*/
+		////System.out.println("listOfMarkersSelected=:"+listOfMarkersForGivenGermplasmRetrieval);
+		////System.out.println("listOfGIDsSelected:"+listOfGIDs);
 		
 		Name names = null;
 		hmOfNvalAndGIds=new HashMap<String, Integer>();
-		
+		hmOfGIdsAndNval=new HashMap<Integer, String>();
 		try{
 			for(int n=0;n<listOfNIDs.size();n++){
 				names=germManager.getGermplasmNameByID(Integer.parseInt(listOfNIDs.get(n).toString()));
@@ -582,7 +608,7 @@ public class RetrieveDataForFlapjack {
 		try {
 			List<AllelicValueElement> allelicValues =genoManager.getAllelicValuesByGidsAndMarkerNames(listOfGIDs, listOfMarkersForGivenGermplasmRetrieval);
 			
-			//System.out.println(" allelicValues =:"+allelicValues);		
+			////System.out.println(" allelicValues =:"+allelicValues);		
 			marker = new HashMap();
 			if (null != allelicValues){
 				for (AllelicValueElement allelicValueElement : allelicValues){
@@ -625,7 +651,98 @@ public class RetrieveDataForFlapjack {
 		
 	}
 	
+	
+	/*private void retrieveCharValuesGermplasmRetrieval() throws MiddlewareQueryException {
+		//ResultSet rsc=stmt2.executeQuery("select count(*) from gdms_char_values where gid in("+gid+")");
 
+		"SELECT DISTINCT gdms_char_values.gid,gdms_char_values.char_value as data,gdms_marker.marker_name"+
+		" FROM gdms_char_values,gdms_marker WHERE gdms_char_values.marker_id=gdms_marker.marker_id"+
+		" AND gdms_char_values.gid IN ("+gid+") AND gdms_char_values.marker_id IN (SELECT marker_id FROM gdms_marker WHERE marker_name IN ("+mlist1.substring(0,mlist1.length()-1)+")) ORDER BY gdms_char_values.gid, gdms_marker.marker_name"
+
+
+		CharValuesDAO charValuesDAOLocal = new CharValuesDAO();
+		charValuesDAOLocal.setSession(localSession);
+		CharValuesDAO charValuesDAOCentral = new CharValuesDAO();
+		charValuesDAOCentral.setSession(centralSession);
+
+		long countCharValuesByGidsLocal = charValuesDAOLocal.countCharValuesByGids(listOfGIDs);
+		long countCharValuesByGidsCentral = charValuesDAOCentral.countCharValuesByGids(listOfGIDs);
+
+		if (0 == countCharValuesByGidsLocal && 0 == countCharValuesByGidsCentral){
+			return;
+		}
+
+		List<CharValues> listOfCharValuesLocal = charValuesDAOLocal.getAll();
+		List<CharValues> listOfCharValuesCentral = charValuesDAOCentral.getAll();
+
+		listOfAllCharValuesForGermplasmRetrieval = new ArrayList<CharValues>();
+		for (CharValues charValues : listOfCharValuesLocal){
+			Integer gid = charValues.getgId();
+			Integer markerId = charValues.getMarkerId();
+			if (listOfGIDsProvidedForGermplasmRetrieval.contains(gid)){
+				if (listOfMIDsForGivenGermplasmRetrieval.contains(markerId)){
+					if (false == listOfAllCharValuesForGermplasmRetrieval.contains(charValues)){
+						listOfAllCharValuesForGermplasmRetrieval.add(charValues);
+					}
+				}
+			}
+		}
+		for (CharValues charValues : listOfCharValuesCentral){
+			Integer gid = charValues.getgId();
+			Integer markerId = charValues.getMarkerId();
+			if (listOfGIDsProvidedForGermplasmRetrieval.contains(gid)){
+				if (listOfMIDsForGivenGermplasmRetrieval.contains(markerId)){
+					if (false == listOfAllCharValuesForGermplasmRetrieval.contains(charValues)){
+						listOfAllCharValuesForGermplasmRetrieval.add(charValues);
+					}
+				}
+			}
+		}
+	}
+
+
+	private void retrieveMappingPopValuesForGermplasmRetrieval() throws MiddlewareQueryException {
+		//ResultSet rsMap=stmtM.executeQuery("select count(*) from gdms_mapping_pop_values where gid in("+gid+")");
+
+		"SELECT DISTINCT gdms_mapping_pop_values.gid,gdms_mapping_pop_values.map_char_value as data,gdms_marker.marker_name"+
+		" FROM gdms_mapping_pop_values,gdms_marker WHERE gdms_mapping_pop_values.marker_id=gdms_marker.marker_id "+
+		" AND gdms_mapping_pop_values.gid IN ("+gid+") AND gdms_mapping_pop_values.marker_id IN (SELECT marker_id FROM gdms_marker WHERE marker_name IN ("+mlist1.substring(0,mlist1.length()-1)+")) ORDER BY gdms_mapping_pop_values.gid, gdms_marker.marker_name"
+
+		MappingPopValuesDAO mappingPopValuesDAOLocal = new MappingPopValuesDAO();
+		mappingPopValuesDAOLocal.setSession(localSession);
+		MappingPopValuesDAO mappingPopValuesDAOCentral = new MappingPopValuesDAO();
+		mappingPopValuesDAOCentral.setSession(centralSession);
+
+		List<MappingPopValues> listOfAllMappingPopValuesLocal = mappingPopValuesDAOLocal.getAll();
+		List<MappingPopValues> listOfAllMappingPopValuesCentral = mappingPopValuesDAOCentral.getAll();
+
+		listOfAllMappingPopValuesForGermplasmRetrieval = new ArrayList<MappingPopValues>();
+
+		for (MappingPopValues mappingPopValues : listOfAllMappingPopValuesLocal){
+			Integer gid = mappingPopValues.getGid();
+			Integer markerId = mappingPopValues.getMarkerId();
+			if (listOfGIDsProvidedForGermplasmRetrieval.contains(gid)){
+				if (listOfMIDsForGivenGermplasmRetrieval.contains(markerId)){
+					if (false == listOfAllMappingPopValuesForGermplasmRetrieval.contains(mappingPopValues)){
+						listOfAllMappingPopValuesForGermplasmRetrieval.add(mappingPopValues);
+					}
+				}
+			}
+		}
+		for (MappingPopValues mappingPopValues : listOfAllMappingPopValuesCentral){
+			Integer gid = mappingPopValues.getGid();
+			Integer markerId = mappingPopValues.getMarkerId();
+			if (listOfGIDsProvidedForGermplasmRetrieval.contains(gid)){
+				if (listOfMIDsForGivenGermplasmRetrieval.contains(markerId)){
+					if (false == listOfAllMappingPopValuesForGermplasmRetrieval.contains(mappingPopValues)){
+						listOfAllMappingPopValuesForGermplasmRetrieval.add(mappingPopValues);
+					}
+				}
+			}
+		}
+
+	}
+*/
 	private void retrieveNIDsForGivenGIDs() throws MiddlewareQueryException {
 		//rs=stmt.executeQuery("select nid from gdms_acc_metadataset where gid in ("+gid+") order by gid");
 		AccMetadataSetDAO accMetadataSetDAOLocal = new AccMetadataSetDAO();
@@ -708,9 +825,9 @@ public class RetrieveDataForFlapjack {
 			}
 		}
 
-			/*System.out.println("Size of list of list of AllelicValueElements for " + strMarkerType + " type are : " + 
-					listIfAllelicValueElements.size());
-*/
+		////System.out.println("Size of list of list of AllelicValueElements for " + strMarkerType + " type are : " + 
+				//listIfAllelicValueElements.size());
+
 
 		for (AllelicValueElement allelicValueElement : listIfAllelicValueElements){
 			Integer gid = allelicValueElement.getGid();
@@ -767,7 +884,7 @@ public class RetrieveDataForFlapjack {
 		//hmOfQtlIdName = new HashMap<QtlDetailsPK, String>();
 		
 		ArrayList QTLNames=new ArrayList();
-		//System.out.println("...............iMapId:"+iMapId);
+		////System.out.println("...............iMapId:"+iMapId);
 		
 		
 		for (QtlDetails qtlDetails : listOfAllQTLsLocal){
@@ -803,7 +920,7 @@ public class RetrieveDataForFlapjack {
 			}
 		}
 
-		//System.out.println("listOfAllQTLDetails=:"+listOfAllQTLDetails);
+		////System.out.println("listOfAllQTLDetails=:"+listOfAllQTLDetails);
 		
 		QtlDAO qtlDAOLocal = new QtlDAO();
 		qtlDAOLocal.setSession(localSession);
@@ -846,7 +963,7 @@ public class RetrieveDataForFlapjack {
 
 		listOfQtlDetailElementByQtlIds = genoManager.getQtlByQtlIds(listOfAllQTLIDs, 0, (int)listOfAllQTLIDs.size());
 	//}
-		//System.out.println(",,,,,,,,,,,,,,,,,,,:"+listOfAllQTLDetails);
+		////System.out.println(",,,,,,,,,,,,,,,,,,,:"+listOfAllQTLDetails);
 	
 	if (null != listOfQtlDetailElementByQtlIds) {
 		for (QtlDetailElement qtlDetailElement : listOfQtlDetailElementByQtlIds) {
@@ -861,7 +978,7 @@ public class RetrieveDataForFlapjack {
 			String strQTLData = strQtlName + "!~!" + strMapName + "!~!" + strTRName + "!~!" + strChromosome +
 					               "!~!" +  strMinPosition + "!~!" + strMaxPosition ;
 			arrayListOfQTLRetrieveDataLocal.add(qtlDetailElement);*/
-			//System.out.println(qtlDetailElement);
+			////System.out.println(qtlDetailElement);
 			listOfAllQTLDetails.add(qtlDetailElement);
 		}
 	}
@@ -912,38 +1029,39 @@ public class RetrieveDataForFlapjack {
 	}
 
 	private void retrieveMapDataForFlapjack() throws MiddlewareQueryException {
-		//System.out.println("//////////////////////////    retrieveMapDataForFlapjack    ///////////////////////////// "+strSelectedMap);
-		MappingDataDAO mappingDataDAOLocal = new MappingDataDAO();
+		////System.out.println("//////////////////////////    retrieveMapDataForFlapjack    ///////////////////////////// "+strSelectedMap);
+		/*MappingDataDAO mappingDataDAOLocal = new MappingDataDAO();
 		mappingDataDAOLocal.setSession(localSession);
 		MappingDataDAO mappingDataDAOCentral = new MappingDataDAO();
-		mappingDataDAOCentral.setSession(centralSession);
+		mappingDataDAOCentral.setSession(centralSession);*/
 		listOfAllMapInfo=new ArrayList();
 		listOfMarkersinMap=new ArrayList();
 		if(strSelectedMap.isEmpty()){
-			/*System.out.println("...........................   MAP NOT SELECTED   ...........................");
-			System.out.println("markersL.size():"+markersL.size());*/
-			for(int m=0; m<markersL.size(); m++){				
-				listOfAllMapInfo.add(sortedMapOfMIDsAndMNames.get(markersL.get(m))+"!~!"+"unmapped"+"!~!"+"0");				
-			}					
+			////System.out.println("...........................   MAP NOT SELECTED   ...........................");
+			////System.out.println("markersL.size():"+markersL.size());
+			for(int m=0; m<listOfMarkersForGivenGermplasmRetrieval.size(); m++){				
+				listOfAllMapInfo.add(listOfMarkersForGivenGermplasmRetrieval.get(m)+"!~!"+"unmapped"+"!~!"+"0");				
+			}			
 		        
 		}else{
-			//System.out.println("map selected ");			
+			////System.out.println("map selected ");			
 			 results = genoManager.getMapInfoByMapName(strSelectedMap, Database.CENTRAL);
 		     if(results == null) {
 		    	 results = genoManager.getMapInfoByMapName(strSelectedMap, Database.LOCAL);
 		     }
 			 
 		     listOfAllMapInfo = new ArrayList();
-			 //System.out.println("testGetMapInfoByMapName(mapName=" + strSelectedMap + ") RESULTS size: " + results.size());
+			 ////System.out.println("testGetMapInfoByMapName(mapName=" + strSelectedMap + ") RESULTS size: " + results.size());
 	        for (MapInfo mapInfo : results){
 	        	listOfMarkersinMap.add(mapInfo.getMapName().toLowerCase());	        	
-	        	//System.out.println(".................mapInfo."+results);
+	        	//////System.out.println(".................mapInfo."+results);
 	        	listOfAllMapInfo.add(mapInfo.getMarkerName()+"!~!"+mapInfo.getLinkageGroup()+"!~!"+mapInfo.getStartPosition());
 	        }	
 	        
-	        for(int m=0; m<markersL.size(); m++){
-	        	if(!(listOfMarkersinMap.contains(markersL.get(m).toString().toLowerCase()))){
-	        		listOfAllMapInfo.add(sortedMapOfMIDsAndMNames.get(markersL.get(m))+"!~!"+"unmapped"+"!~!"+"0");		
+	        for(int m=0; m<listOfMarkersForGivenGermplasmRetrieval.size(); m++){
+	        	if(!(listOfMarkersinMap.contains(listOfMarkersForGivenGermplasmRetrieval.get(m).toString().toLowerCase()))){
+	        		//listOfAllMapInfo.add(sortedMapOfMIDsAndMNames.get(listOfMarkersForGivenGermplasmRetrieval.get(m))+"!~!"+"unmapped"+"!~!"+"0");		
+	        		listOfAllMapInfo.add(listOfMarkersForGivenGermplasmRetrieval.get(m)+"!~!"+"unmapped"+"!~!"+"0");
 	        	}
 			}
 	        
@@ -954,7 +1072,7 @@ public class RetrieveDataForFlapjack {
 
 	private void retrieveValuesForSNPDatasetType() throws NumberFormatException, MiddlewareQueryException {
 		int iDatasetId = Integer.parseInt(strDatasetID);		
-		//System.out.println("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS  :"+iDatasetId+"   "+strDatasetID);
+		////System.out.println("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS  :"+iDatasetId+"   "+strDatasetID);
 		allelicValues=new ArrayList();
 		allelicValues =genoManager.getAllelicValuesFromCharValuesByDatasetId(iDatasetId, 0, (int)genoManager.countAllelicValuesFromCharValuesByDatasetId(iDatasetId));
 		for(AllelicValueWithMarkerIdElement results : allelicValues) {
@@ -978,7 +1096,7 @@ public class RetrieveDataForFlapjack {
 	}
 
 	private void retrieveValuesForMappingDatasetType() throws MiddlewareQueryException {
-		//System.out.println("select gid, marker_id, map_char_value from gdms_mapping_pop_values where dataset_id="+datasetId+" ORDER BY gid, marker_id ASC");
+		////System.out.println("select gid, marker_id, map_char_value from gdms_mapping_pop_values where dataset_id="+datasetId+" ORDER BY gid, marker_id ASC");
 		//rsD=st.executeQuery("select gid, marker_id, map_char_value from gdms_mapping_pop_values where dataset_id="+datasetId+" ORDER BY gid, marker_id ASC");
 
 		listOfAllelicValuesForMappingType = new ArrayList<AllelicValueWithMarkerIdElement>();
@@ -992,6 +1110,11 @@ public class RetrieveDataForFlapjack {
         }
 		//System.out.println("Size of Allelic Value Elements for " +  strDatasetType + " Datatype: " + intAlleleValues.size());
 	}
+	
+	
+	
+	
+	
 
 	private void retrieveMarkersForMarkerIDs() throws MiddlewareQueryException {
 		MarkerDAO markerDAOLocal = new MarkerDAO();
@@ -1037,8 +1160,8 @@ public class RetrieveDataForFlapjack {
 			}
 		}
 
-		/*System.out.println("Size of list of all Marker-Names: " + listOfMarkerNames.size());
-		System.out.println("Size of Hashmap of MIDs and MNames: " + hmOfMIDandMNames.size());*/
+		//System.out.println("Size of list of all Marker-Names: " + listOfMarkerNames.size());
+		//System.out.println("Size of Hashmap of MIDs and MNames: " + hmOfMIDandMNames.size());
 	}
 
 	private void retrieveGermplasmNames() throws MiddlewareQueryException {
@@ -1120,7 +1243,7 @@ public class RetrieveDataForFlapjack {
 			names=germManager.getGermplasmNameByID(nids.get(n));
 			hmOfGIdsAndNval.put(names.getGermplasmId(), names.getNval());
 		}
-				
+		
 		
 		
 
@@ -1267,7 +1390,7 @@ public class RetrieveDataForFlapjack {
 		
 		List<ParentElement> results = genoManager.getParentsByDatasetId(Integer.parseInt(strDatasetID));
 		for (ParentElement parentElement : results){
-			//System.out.println(parentElement.getParentANId()+"   "+parentElement.getParentBGId());
+			////System.out.println(parentElement.getParentANId()+"   "+parentElement.getParentBGId());
 			parentANid=parentElement.getParentANId();			
 			parentBNid=parentElement.getParentBGId();
 		}

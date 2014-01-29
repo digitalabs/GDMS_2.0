@@ -241,7 +241,7 @@ public class SNPMarker implements UploadMarker {
 		/** 
 		 * Obtaining the list of existing Markers from the database using the MarkerDAO object 
 		 */
-		Session session = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
+		Session session = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
 		MarkerDAO markerDAO = new MarkerDAO();
 		markerDAO.setSession(session);
 		List<Marker> listOfAllExistingMarkersFromDB;
@@ -263,7 +263,7 @@ public class SNPMarker implements UploadMarker {
 		 * Checking for duplicates Marker information in Central database as well
 		 *  
 		 */
-		Session centralSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
+		Session centralSession =GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
 		MarkerDAO markerDAOCentral = new MarkerDAO();
 		markerDAOCentral.setSession(centralSession);
 		try {
@@ -380,7 +380,7 @@ public class SNPMarker implements UploadMarker {
 	
 	public void saveSNPMarker() throws GDMSException {
 		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
-		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
+		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal());
 		genotypicDataManagerImpl.setSessionProviderForCentral(null);
 
 		try {

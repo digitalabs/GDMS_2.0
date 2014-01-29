@@ -3,10 +3,12 @@ package org.icrisat.gdms.upload.maporqtl;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -15,26 +17,33 @@ import jxl.Workbook;
 import jxl.read.biff.BiffException;
 
 import org.generationcp.middleware.dao.UserDAO;
-import org.generationcp.middleware.domain.dms.StandardVariable;
 import org.generationcp.middleware.exceptions.MiddlewareQueryException;
 import org.generationcp.middleware.hibernate.HibernateSessionProvider;
-import org.generationcp.middleware.manager.GermplasmDataManagerImpl;
+import org.generationcp.middleware.manager.Database;
+import org.generationcp.middleware.manager.GdmsTable;
 import org.generationcp.middleware.manager.ManagerFactory;
 import org.generationcp.middleware.manager.WorkbenchDataManagerImpl;
 import org.generationcp.middleware.manager.api.GenotypicDataManager;
 import org.generationcp.middleware.manager.api.OntologyDataManager;
+import org.generationcp.middleware.manager.api.WorkbenchDataManager;
 import org.generationcp.middleware.pojos.User;
-import org.generationcp.middleware.pojos.gdms.DartDataRow;
-import org.generationcp.middleware.pojos.gdms.Dataset;
-import org.generationcp.middleware.pojos.gdms.DatasetUsers;
+import org.generationcp.middleware.pojos.gdms.DatasetElement;
 import org.generationcp.middleware.pojos.gdms.Qtl;
 import org.generationcp.middleware.pojos.gdms.QtlDataRow;
-import org.generationcp.middleware.pojos.gdms.QtlDetails;
 import org.generationcp.middleware.pojos.workbench.WorkbenchRuntimeData;
+import org.hibernate.Hibernate;
+import org.hibernate.Query;
+import org.hibernate.SQLQuery;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.icrisat.gdms.common.GDMSException;
 import org.icrisat.gdms.ui.FieldProperties;
 import org.icrisat.gdms.ui.common.GDMSModel;
 import org.icrisat.gdms.upload.UploadMarker;
+import org.icrisat.gdms.upload.genotyping.DatasetBean;
+import org.icrisat.gdms.upload.genotyping.GenotypeUsersBean;
+import org.icrisat.gdms.upload.genotyping.QTLBean;
+import org.icrisat.gdms.upload.genotyping.QTLDetailsBean;
 import org.icrisat.gdms.upload.marker.UploadField;
 
 public class QTLUpload implements UploadMarker {
@@ -47,19 +56,30 @@ public class QTLUpload implements UploadMarker {
 	private ArrayList<HashMap<String, String>> listOfDataRowsFromSourceTable;
 	private ArrayList<HashMap<String, String>> listOfDataRowsFromDataTable;
 	private ArrayList<HashMap<String, String>> listOfGIDRowsFromGIDTableForDArT;
-	private DatasetUsers datasetUser;
-	private Dataset dataset;
-	private QtlDetails qtlDetails;
-	private Qtl qtl;
-	private Qtl[] arrayOfQTLs;
-
+	private GenotypeUsersBean datasetUser;
+	private DatasetBean dataset;
+	private QTLDetailsBean qtlDetails;
+	private QTLBean qtl;
+	
+	//private Qtl[] arrayOfQTLs;
+	
+	
+	private Session localSession;
+	private Session centralSession;
+	
+	//private Session session;
+	private Transaction tx;
+	/*
+	private Session sessionL;
+	private Session sessionC;
+*/
 	ManagerFactory factory;
     GenotypicDataManager genoManager;
     OntologyDataManager om;
     List<QtlDataRow> listOfQTLDataRows; 
-    
+    WorkbenchDataManager  workbenchManager;
     Integer mapId =0;
-    
+    int qtlId=0;
     Integer iDatasetId = null; //Will be set/overridden by the function
 	
 	String strDatasetType = "QTL";
@@ -72,6 +92,13 @@ public class QTLUpload implements UploadMarker {
 	//First checking for the Map Name provided exists in the Database (gdms_map table) or not
 	String strMapNameFromTemplate = "";
     ArrayList traitsList=new ArrayList();
+    List traitsQList=new ArrayList();
+    
+    long lastId =0;
+    String traits="";
+    
+    SQLQuery query;
+    
     ArrayList traitsComList=new ArrayList();
     
 	@Override
@@ -227,8 +254,11 @@ public class QTLUpload implements UploadMarker {
 
 					//6 --- Trait	
 					String strTrait = sheetQTLData.getCell(6, r).getContents().trim().toString();
-					if(!traitsList.contains(strTrait))
+					
+					if(!traitsList.contains(strTrait)){
 						traitsList.add(strTrait);
+						traits=traits+"'"+strTrait+"',";
+					}
 					if (strTrait.equals("")){
 						String strErrMsg = "Please provide value in Trait-ID column at row:" + r;
 						throw new GDMSException(strErrMsg);
@@ -422,6 +452,26 @@ public class QTLUpload implements UploadMarker {
 
 	@Override
 	public void upload() throws GDMSException {
+		try{
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			genoManager=factory.getGenotypicDataManager();
+	
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+		
+		/*HibernateSessionProvider hibernateSessionProviderForLocal = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal();
+		//germplasmDataManagerImpl.setSessionProviderForLocal(hibernateSessionProviderForLocal);
+		localSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
+		centralSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
+		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+		genoManager=factory.getGenotypicDataManager();
+		sessionL=localSession.getSessionFactory().openSession();	
+        sessionC=centralSession.getSessionFactory().openSession();	
+		*/
 		//System.out.println("$$$$$$$$$$$$$$$$$$$$$$$$$$");
 		validateData();
 		createObjectsToBeSavedToDB();
@@ -429,12 +479,31 @@ public class QTLUpload implements UploadMarker {
 
 	@Override
 	public void validateData() throws GDMSException {
-		//System.out.println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
+		/*localSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
+		centralSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
+		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+		genoManager=factory.getGenotypicDataManager();
+		sessionL=localSession.getSessionFactory().openSession();	
+        sessionC=centralSession.getSessionFactory().openSession();*/
+		
+		try{
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			genoManager=factory.getGenotypicDataManager();
+	
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+		
+		System.out.println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
 		String strArrayOfReqColNames[] = {UploadField.Institute.toString(), UploadField.DatasetName.toString(), UploadField.DatasetDescription.toString(), 
 				UploadField.Genus.toString()};
 
 		HashMap<String, String> hashMapOfFieldsAndValuesFromSource = listOfDataRowsFromSourceTable.get(0);
 		for(int j = 0; j < strArrayOfReqColNames.length; j++){
+			//System.out.println( strArrayOfReqColNames[j]);
 			String strReqCol = strArrayOfReqColNames[j];
 			if(false == hashMapOfFieldsAndValuesFromSource.containsKey(strReqCol)){
 				throw new GDMSException("Column " + strArrayOfReqColNames[j].toLowerCase() + " not found in QTL_Source sheet.");
@@ -458,10 +527,12 @@ public class QTLUpload implements UploadMarker {
 				UploadField.Position.toString(), UploadField.PosMin.toString(), UploadField.PosMax.toString(),
 				UploadField.TraitID.toString(),  UploadField.LFM.toString(),
 				UploadField.RFM.toString(), UploadField.Effect.toString(), UploadField.LOD.toString(), UploadField.R2.toString()};
-
+		ArrayList qtlList=new ArrayList();
+		String QTLs="";
 		for(int j = 0; j < listOfDataRowsFromDataTable.size(); j++){
 			String strReqColInDataSheet = strArrayOfRequiredColumnNames[j];
 			HashMap<String, String> hashMapOfDataRow = listOfDataRowsFromDataTable.get(j);
+			System.out.println(hashMapOfDataRow.get(UploadField.Name.toString()));
 			if(false == hashMapOfDataRow.containsKey(strReqColInDataSheet)){
 				throw new GDMSException("Column " + strArrayOfReqColNames[j] + " not found in QTL_Data sheet.");
 			} else {
@@ -472,50 +543,119 @@ public class QTLUpload implements UploadMarker {
 					throw new GDMSException("Please provide the value for " +  strReqColInDataSheet  + " in QTL_Data sheet of the template.");
 				}
 			}
+			qtlList.add(hashMapOfDataRow.get(UploadField.Name.toString()));
+			QTLs=QTLs+"'"+hashMapOfDataRow.get(UploadField.Name.toString())+"',";
 		}
+		//String strQTLQuerry="select * from gdms_qtl where qtl_name in ("+QTLs.substring(0, QTLs.length()-1)+")";
+		String existingQTLs="";
+		String QTLexistance="no";
+		for(int q=0;q<qtlList.size();q++){
+			try{
+				//System.out.println("<<<<  :"+genoManager.countQtlByName(qtlList.get(q).toString()));
+				//System.out.println("..........  :"+genoManager.countQtlIdByName(qtlList.get(q).toString()));
+				int qtlCount=(int)genoManager.countQtlByName(qtlList.get(q).toString());
+				if(qtlCount>0){
+					existingQTLs=existingQTLs+qtlList.get(q).toString()+",";
+					QTLexistance="yes";
+				}
+			} catch (MiddlewareQueryException e) {
+				//throw new GDMSException(e.getMessage());
+				e.printStackTrace();
+			}
+		}
+		
+		if(QTLexistance.equalsIgnoreCase("yes")){
+			throw new GDMSException("Following QTL(s) already exists. Please check. \n"+existingQTLs);
+
+		}
+		
+		/*query=sessionC.createSQLQuery(strQTLQuerry);
+		
+		query.addScalar("cvterm_id",Hibernate.INTEGER);	
+		query.addScalar("name",Hibernate.STRING);	
+		traitsQList=query.list();
+		
+		rsQC=stCen.executeQuery("select * from gdms_qtl where qtl_name in ("+QTLs+")");
+		while(rsQC.next()){
+			result2.add(rsQC.getString(2));
+		}
+		while(rsQL.next()){
+			result2.add(rsQL.getString(2));
+		}
+		if(result2.size()>0){
+			ErrMsg = "Following QTL(s) already exists. Please check. \n"+result2;
+			request.getSession().setAttribute("indErrMsg", ErrMsg);							
+			return "ErrMsg";
+		}*/
 	}
 
 	@Override
 	public void createObjectsToBeSavedToDB() throws GDMSException {
-		//System.out.println("!!!!!@@@@@@@@@@@@@@@@@@@@@#############################$$$$$$$$$$$$$$$$$$$$$$$%%%%%%%%%%%%%%%%%%%%%%%%^^^^^^^^^^^^^^^^^&&&&&&&&&&&&&&&&");
-		//System.out.println("traitsList:"+traitsList);
-		GermplasmDataManagerImpl germplasmDataManagerImpl = new GermplasmDataManagerImpl();
-		HibernateSessionProvider hibernateSessionProviderForLocal = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal();
-		germplasmDataManagerImpl.setSessionProviderForLocal(hibernateSessionProviderForLocal);
+		System.out.println("!!!!!@@@@@@@@@@@@@@@@@@@@@#############################$$$$$$$$$$$$$$$$$$$$$$$%%%%%%%%%%%%%%%%%%%%%%%%^^^^^^^^^^^^^^^^^&&&&&&&&&&&&&&&&");
+		System.out.println("traitsList:"+traitsList);
+		try{
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			genoManager=factory.getGenotypicDataManager();
+	
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+		String strQuerry="SELECT cvterm_id, name FROM cvterm WHERE NAME IN ("+traits.substring(0,traits.length()-1)+") AND cv_id=1010";
 		
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		genoManager=factory.getGenotypicDataManager();
+		//GermplasmDataManagerImpl germplasmDataManagerImpl = new GermplasmDataManagerImpl();
+		
 		int iNumOfQTLDataRowsFromDataTable = listOfDataRowsFromDataTable.size();
-		
-		
-		om=factory.getNewOntologyDataManager();
+		/*try{
+			System.out.println("Workbench user =:"+workbenchManager.getWorkbenchRuntimeData().getUserId());
+		} catch (MiddlewareQueryException e) {
+			//throw new GDMSException(e.getMessage());
+			e.printStackTrace();
+		}*/
+		//om=factory.getNewOntologyDataManager();
 		mapTraits = new TreeMap();
         List retTraits = new ArrayList();
-		//System.out.println("traitList=:"+traitsList);
-        try{
+		
+        /*try{
         	// System.out.println(" ......................    traitList=:"+om.getAllStandardVariables());
 	        for(int t=0;t<traitsList.size();t++){
 	       	
 	       	 Set<StandardVariable> standardVariables = om.findStandardVariablesByNameOrSynonym(traitsList.get(t).toString());
 				//assertTrue(standardVariables.size() == 1);
 				for (StandardVariable stdVar : standardVariables) {
-					//System.out.println(stdVar.getId()+"   "+stdVar.getNameSynonyms()+"   "+stdVar.getName());
+					System.out.println(stdVar.getId()+"   "+stdVar.getNameSynonyms()+"   "+stdVar.getName());
 					traitsComList.add(stdVar.getId());
 					retTraits.add(stdVar.getName());
 					mapTraits.put(stdVar.getName(), stdVar.getId());
-					/*tids=tids+stdVar.getId()+",";
-					tidsCount++;*/
+					tids=tids+stdVar.getId()+",";
+					tidsCount++;
 				}
 	        }
 		} catch (MiddlewareQueryException e) {
+			//throw new GDMSException(e.getMessage());
 			e.printStackTrace();
-		}
+		}*/
+        
+        
+        
+        query=centralSession.createSQLQuery(strQuerry);			
+		if(query.list().isEmpty())				
+			query=localSession.createSQLQuery(strQuerry);	
 		
-		
+		query.addScalar("cvterm_id",Hibernate.INTEGER);	
+		query.addScalar("name",Hibernate.STRING);	
+		traitsQList=query.list();
+		System.out.println("traitsQList=:"+traitsQList);
+		for(int w=0;w<traitsQList.size();w++){
+        	Object[] strMareO= (Object[])traitsQList.get(w);
+        	//System.out.println("W=....."+w+"    "+strMareO[0]+"   "+strMareO[1]);
+        	mapTraits.put(strMareO[1], strMareO[0]);
+        	 	
+ 		}
 		
 		HashMap<String, String> hashMapOfSourceDataFields = listOfDataRowsFromSourceTable.get(0);
-		
-		
 		
 		//Assigning the User Id value based on the Principle investigator's value in the QTL_Source sheet
 		Integer iUserId = 0;
@@ -531,7 +671,7 @@ public class QTLUpload implements UploadMarker {
 		String strMethod=hashMapOfSourceDataFields.get(UploadField.Method.toString());
 		String strScore=hashMapOfSourceDataFields.get(UploadField.Score.toString());
 		
-		if (null == strPrincipleInvestigator || strPrincipleInvestigator.equals("")) {
+		/*if (null == strPrincipleInvestigator || strPrincipleInvestigator.equals("")) {
 			WorkbenchDataManagerImpl workbenchDataManagerImpl = new WorkbenchDataManagerImpl(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
 			WorkbenchRuntimeData workbenchRuntimeData;
 			try {
@@ -545,9 +685,9 @@ public class QTLUpload implements UploadMarker {
 			} catch (MiddlewareQueryException e) {
 				throw new GDMSException(e.getMessage());
 			}
-		} else {
+		} else {*/
 			UserDAO userDAO = new UserDAO();
-			userDAO.setSession(hibernateSessionProviderForLocal.getSession());
+			userDAO.setSession(localSession);
 			List<User> listOfAllUsers =  null;
 			try {
 				listOfAllUsers = userDAO.getAll();
@@ -562,85 +702,113 @@ public class QTLUpload implements UploadMarker {
 			} catch (MiddlewareQueryException e) {
 				throw new GDMSException(e.getMessage());
 			}
-		}
-		
-		
-		/*GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
-		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());*/
-		/*List<Map> listOfAllMapsL = null;
-		List<Map> listOfAllMapsC = null;
-		
-		try {
-			long lCountOfAllMaps = genoManager.countAllMaps(Database.LOCAL);
-			listOfAllMaps = genoManager.getAllMaps(0, (int)lCountOfAllMaps, Database.LOCAL);
-			long lCountOfAllMapsC = genoManager.countAllMaps(Database.CENTRAL);
-			listOfAllMaps = genoManager.getAllMaps(0, (int)lCountOfAllMapsC, Database.CENTRAL);
-			
-			listOfAllMapsL= genoManager.getAllMaps(0, (int)genoManager.countAllMaps(Database.LOCAL), Database.LOCAL);
-			listOfAllMapsC= genoManager.getAllMaps(0, (int)genoManager.countAllMaps(Database.CENTRAL), Database.CENTRAL);
-		    genoManager.getMapIdByName(arg0)
-			
-			assertNotNull(results);
-		    assertTrue(!results.isEmpty());
-		    System.out.println("testGetAllMaps("+Database.LOCAL+") Results:");
-		    for (Map result : listOfAllMapsL){
-		    	System.out.println("  " + result);
-		    }
-			
-			
-		} catch (MiddlewareQueryException e) {
+		//}
+		try{
+			lastId = genoManager.getLastId(Database.LOCAL, GdmsTable.GDMS_DATASET);
+		}catch (MiddlewareQueryException e) {
 			throw new GDMSException(e.getMessage());
 		}
-		System.out.println(".......................:"+listOfAllMaps);*/
+		int intDatasetId=(int)lastId;
+		
+		iDatasetId=intDatasetId-1;
+		
 		//arrayOfQTLs = new Qtl[iNumOfQTLDataRowsFromDataTable];
 		int iUploadedQTLCtr = 0;
-		dataset = new Dataset();
-		dataset.setDatasetName(strDatasetName);
-		dataset.setDatasetDesc(strDatasetDesc);
-		dataset.setDatasetType(strDatasetType);
+		
+		String mon="";
+		Calendar cal = new GregorianCalendar();
+		int month = cal.get(Calendar.MONTH);
+		int year = cal.get(Calendar.YEAR);
+		int day = cal.get(Calendar.DAY_OF_MONTH);
+		if(month>=10) 
+			mon=String.valueOf(month+1);
+		else 
+			mon="0"+(month+1);
+		  
+		 String curDate=year+"-"+mon+"-"+day;
+		 
+
+			int intMaxVal=0;
+			Object obj=null;
+			Iterator itList=null;
+			List listValues=null;
+			Query query=localSession.createSQLQuery("select min(qtl_id) from gdms_qtl");
+			
+			listValues=query.list();
+			itList=listValues.iterator();
+						
+			while(itList.hasNext()){
+				obj=itList.next();
+				if(obj!=null)
+					intMaxVal=Integer.parseInt(obj.toString());
+			}
+			
+			qtlId=intMaxVal-1;
+		 
+		 //session = HibernateSessionFactory.currentSession();
+		 tx=localSession.beginTransaction();
+		
+		 try{
+				List<DatasetElement> results =genoManager.getDatasetDetailsByDatasetName(strDatasetName, Database.CENTRAL);
+				if(results.isEmpty()){			
+					results =genoManager.getDatasetDetailsByDatasetName(strDatasetName, Database.LOCAL);
+					if(results.size()>0)
+						throw new GDMSException("Dataset Name already exists.");
+				}else 
+					throw new GDMSException("Dataset Name already exists.");
+			
+			} catch (MiddlewareQueryException e) {
+				throw new GDMSException(e.getMessage());
+			}
+			if(strDatasetName.length()>30){
+				//ErrMsg = "Dataset Name value exceeds max char size.";
+				throw new GDMSException("Dataset Name value exceeds max char size.");
+			}
+		 
+		dataset = new DatasetBean();
+		dataset.setDataset_id(iDatasetId);
+		dataset.setDataset_name(strDatasetName);
+		dataset.setDataset_desc(strDatasetDesc);
+		dataset.setDataset_type(strDatasetType);
 		dataset.setGenus(strGenus);
 		dataset.setSpecies(strSpecies);
-		dataset.setUploadTemplateDate(uploadTemplateDate);
+		dataset.setUpload_template_date(curDate);
 		dataset.setRemarks(strRemarks);
-		dataset.setDataType(strDataType);
-		dataset.setMissingData(strMissingData);
+		dataset.setDatatype(strDataType);
+		dataset.setMissing_data(strMissingData);
 		dataset.setMethod(strMethod);
 		dataset.setScore(strScore);
 		dataset.setInstitute(strInstitute);
-		dataset.setPrincipalInvestigator(strPrincipleInvestigator);
+		dataset.setPrincipal_investigator(strPrincipleInvestigator);
 		dataset.setEmail(strEmail);
-		dataset.setPurposeOfStudy(strPurposeOfStudy);
-		
+		dataset.setPurpose_of_study(strPurposeOfStudy);
+		localSession.save(dataset);
 		
 		//System.out.println(iDatasetId+","+ iUserId);
-		datasetUser = new DatasetUsers(iDatasetId, iUserId);
+		datasetUser = new GenotypeUsersBean();
+		datasetUser.setDataset_id(iDatasetId);
+		datasetUser.setUser_id(iUserId);
+		//iDatasetId, iUserId);
+		localSession.save(datasetUser);
 		
-		//QtlDataRow qtlDataRow = new QtlDataRow(qtl, qtlDetails);//addedMarker, accMetadataSet, markerMetadataSet, alleleValues, dartValues);
-		listOfQTLDataRows  = new ArrayList<QtlDataRow>();
+		
+		
+		
+		//listOfQTLDataRows  = new ArrayList<QtlDataRow>();
 		for (int i = 0; i < iNumOfQTLDataRowsFromDataTable; i++){
 			
-			HashMap<String, String> hashMapOfDataRowFromDataTable = listOfDataRowsFromDataTable.get(0);
+			HashMap<String, String> hashMapOfDataRowFromDataTable = listOfDataRowsFromDataTable.get(i);
 			
 			String strMapNameFromTemplate = hashMapOfDataRowFromDataTable.get(UploadField.MapName.toString());
 			Integer iMapId = 1;
 			boolean bMapExists = false;
-			/*for (int j = 0; j < listOfAllMaps.size(); j++){
-				Map map = listOfAllMaps.get(j);
-				System.out.println(".............:"+map.getMapName());
-				String strMapNameFromDB = map.getMapName();
-				if (strMapNameFromDB.equals(strMapNameFromTemplate)){
-					iMapId = map.getMapId();
-					bMapExists = true;
-					break;
-				} 
-			}*/
 			
 			try {
 				mapId = genoManager.getMapIdByName(strMapNameFromTemplate);
 			} catch (MiddlewareQueryException e) {
 				throw new GDMSException(e.getMessage());
 			}
-				//System.out.println("map id=:"+mapId);
+				System.out.println("map id=:"+mapId);
 			if(mapId!=0){
 				iMapId =mapId;
 				bMapExists = true;
@@ -679,10 +847,10 @@ public class QTLUpload implements UploadMarker {
 			String strTrait = hashMapOfDataRowFromDataTable.get(UploadField.TraitID.toString());
 			//Integer traitId = Integer.parseInt(strTrait);
 			
-			//System.out.println("strTrait:"+strTrait);
+			System.out.println("strTrait:"+strTrait);
 			
 			String strExperiment = hashMapOfDataRowFromDataTable.get(UploadField.Experiment.toString());
-			//System.out.println("strExperiment:"+strExperiment);
+			System.out.println("strExperiment:"+strExperiment);
 			
 			String strClen = hashMapOfDataRowFromDataTable.get(UploadField.Clen.toString());
 			Float fClen = 0f;
@@ -698,27 +866,28 @@ public class QTLUpload implements UploadMarker {
 			if (false == strEffect.equals("")){
 				fEffect = Float.parseFloat(strEffect);
 			}
-			//System.out.println("fEffect:"+fEffect);
+			System.out.println("fEffect:"+fEffect);
 			
 			
 			String strSEAdditive = hashMapOfDataRowFromDataTable.get(UploadField.additive.toString());
-			//System.out.println("strSEAdditive:"+strSEAdditive);
+			System.out.println("strSEAdditive:"+strSEAdditive);
 			String strHVParent = hashMapOfDataRowFromDataTable.get(UploadField.HighParent.toString()); 
-			//System.out.println("strHVParent=:"+strHVParent);
+			System.out.println("strHVParent=:"+strHVParent);
 			
 			String strHVAllele = hashMapOfDataRowFromDataTable.get(UploadField.HighValueAllele.toString());
-			//System.out.println("strHVAllele=:"+strHVAllele);
+			System.out.println("strHVAllele=:"+strHVAllele);
 			
 			String strLVParent = hashMapOfDataRowFromDataTable.get(UploadField.LowParent.toString());
-			//System.out.println("strLVParent=:"+strLVParent);
+			System.out.println("strLVParent=:"+strLVParent);
 			
 			String strLVAllele = hashMapOfDataRowFromDataTable.get(UploadField.LowAllele.toString());
 			
-			//System.out.println("strLVAllele=:"+strLVAllele);
+			System.out.println("strLVAllele=:"+strLVAllele);
 			
 			String strR2 = hashMapOfDataRowFromDataTable.get(UploadField.R2.toString());
-			//System.out.println("strR2=:"+strR2);
-			//System.out.println("R2:"+strR2);
+			System.out.println("strR2=:"+strR2);
+			System.out.println("R2:"+strR2);
+			
 			Float fRSquare = 0f;
 			if (false == strR2.equals("")){
 				fRSquare = Float.parseFloat(strR2);
@@ -738,62 +907,65 @@ public class QTLUpload implements UploadMarker {
 			String strHVAllele = null; 
 			String strLVParent = null;
 			String strLVAllele = null;*/
-			/*System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-			System.out.println(iDatasetId+","+strDatasetName+","+strDatasetDesc+","+strDatasetType+","+strGenus+","+strSpecies+","+uploadTemplateDate+","+strRemarks+","+strDataType+","+ strMissingData+","+strMethod+","+strScore+","+strInstitute+","+strPrincipleInvestigator+","+strEmail+","+ strPurposeOfStudy);*/
+			System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+			System.out.println("DatasetDetails:"+iDatasetId+","+strDatasetName+","+strDatasetDesc+","+strDatasetType+","+strGenus+","+strSpecies+","+uploadTemplateDate+","+strRemarks+","+strDataType+","+ strMissingData+","+strMethod+","+strScore+","+strInstitute+","+strPrincipleInvestigator+","+strEmail+","+ strPurposeOfStudy);
 			//dataset = new Dataset(iDatasetId, strDatasetName, strDatasetDesc, strDatasetType, strGenus, strSpecies, uploadTemplateDate, strRemarks,
 			//strDataType, strMissingData, strMethod, strScore);
 			
 			
 			//qtlDetails = new QtlDetails(iQTLId, iMapId, fMinPosition, fMaxPosition, strTrait, strExperiment, fEffect,
 					//fScoreValue, fRSquare, strLinkageGroup, strInteractions, strLeftFlankingMarker,
-					//strRightFlankingMarker, fPosition, fClen, strSEAdditive, strHVParent, strHVAllele, strLVParent, strLVAllele); 
-			qtl = new Qtl();
-			qtl.setQtlName(strQTLName);
+					//strRightFlankingMarker, fPosition, fClen, strSEAdditive, strHVParent, strHVAllele, strLVParent, strLVAllele);
+			
+			//genoManager.getLastId(Database.LOCAL, GdmsTable.)
+			
+			qtl = new QTLBean();
+			qtl.setDataset_id(iDatasetId);
+			qtl.setQtl_id(qtlId);
+			qtl.setQtl_name(strQTLName);
+			localSession.save(qtl);
 			//iQTLId, strQTLName, iDatasetId);
-			/*System.out.println("mapTraits:"+mapTraits);
-			System.out.println(iQTLId+","+iMapId+","+fMinPosition+","+fMaxPosition+","+strExperiment+","+fEffect+","+fScoreValue+","+fRSquare+","+strLinkageGroup+","+strInteractions+","+strLeftFlankingMarker+","+strRightFlankingMarker+","+fPosition+","+fClen+","+strSEAdditive+","+strHVParent+","+strHVAllele+","+strLVParent+","+strLVAllele);
-			*/
-			qtlDetails = new QtlDetails();
+			System.out.println("mapTraits:"+mapTraits);
+			System.out.println("QTL Details:"+qtlId+","+iMapId+","+fMinPosition+","+fMaxPosition+","+strExperiment+","+fEffect+","+fScoreValue+","+fRSquare+","+strLinkageGroup+","+strInteractions+","+strLeftFlankingMarker+","+strRightFlankingMarker+","+fPosition+","+fClen+","+strSEAdditive+","+strHVParent+","+strHVAllele+","+strLVParent+","+strLVAllele);
+			
+			qtlDetails = new QTLDetailsBean();
+			qtlDetails.setQtl_id(qtlId);
 			qtlDetails.setPosition(fPosition);
-			qtlDetails.setMinPosition(fMinPosition);
-			qtlDetails.setMaxPosition(fMaxPosition);
-			
-			/*if (null != mapTraits.get(strTrait)) {
-				qtlDetails.setTraitId(Integer.parseInt(mapTraits.get(strTrait).toString()));
-			} else {
-				qtlDetails.setTraitId(0);
-			}*/
-			qtlDetails.setTraitId(Integer.parseInt(mapTraits.get(strTrait).toString()));
-			
+			qtlDetails.setMin_position(fMinPosition);
+			qtlDetails.setMax_position(fMaxPosition);
+			qtlDetails.setTid(Integer.parseInt(mapTraits.get(strTrait).toString()));
 			qtlDetails.setExperiment(strExperiment);
 			qtlDetails.setEffect(fEffect);
-			qtlDetails.setScoreValue(fScoreValue);
-			qtlDetails.setrSquare(fRSquare);
-			qtlDetails.setLinkageGroup(strLinkageGroup);
+			qtlDetails.setScore_value(fScoreValue);
+			qtlDetails.setR_square(fRSquare);
+			qtlDetails.setLinkage_group(strLinkageGroup);
 			qtlDetails.setInteractions(strInteractions);
-			qtlDetails.setLeftFlankingMarker(strLeftFlankingMarker);
-			qtlDetails.setRightFlankingMarker(strRightFlankingMarker);
+			qtlDetails.setLeft_flanking_marker(strLeftFlankingMarker);
+			qtlDetails.setRight_flanking_marker(strRightFlankingMarker);
 			qtlDetails.setClen(fClen);
-			qtlDetails.setSeAdditive(strSEAdditive);
-			qtlDetails.setHvParent(strHVParent);
-			qtlDetails.setHvAllele(strHVAllele);
-			qtlDetails.setLvParent(strLVParent);
-			qtlDetails.setLvAllele(strLVAllele);
+			qtlDetails.setSe_additive(strSEAdditive);
+			qtlDetails.setHv_parent(strHVParent);
+			qtlDetails.setHv_allele(strHVAllele);
+			qtlDetails.setLv_parent(strLVParent);
+			qtlDetails.setLv_allele(strLVAllele);
 			
-			
-			
+			localSession.save(qtlDetails);
+			qtlId--;
+			if (i % 1 == 0){
+				localSession.flush();
+				localSession.clear();
+			}
 			//arrayOfQTLs[iUploadedQTLCtr++] = qtl;
-			QtlDataRow qtlDataRow = new QtlDataRow(qtl, qtlDetails);//addedMarker, accMetadataSet, markerMetadataSet, alleleValues, dartValues);
-			listOfQTLDataRows.add(qtlDataRow);
+			/*QtlDataRow qtlDataRow = new QtlDataRow(qtl, qtlDetails);//addedMarker, accMetadataSet, markerMetadataSet, alleleValues, dartValues);
+			listOfQTLDataRows.add(qtlDataRow);*/
 			
 		}
-		saveQTL();
+		//saveQTL();
+		tx.commit();
 	}
 	
-	protected void saveQTL() throws GDMSException {
-		/*GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
-		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
-		genotypicDataManagerImpl.setSessionProviderForCentral(null);*/
+	/*protected void saveQTL() throws GDMSException {
+		
 		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
 		genoManager=factory.getGenotypicDataManager();
 		try {
@@ -801,11 +973,11 @@ public class QTLUpload implements UploadMarker {
 			genoManager.setQTL(dataset, datasetUser,listOfQTLDataRows);
 			
 		} catch (MiddlewareQueryException e) {
-			throw new GDMSException("Error uploading QTL");
+			throw new GDMSException("Error uploading QTL Middleware Exception");
 		} catch (Throwable th){
 			throw new GDMSException("Error uploading QTL", th);
 		}
-	}
+	}*/
 
 	@Override
 	public void setListOfColumns(ArrayList<FieldProperties> theListOfColumnsInTheTable) {
@@ -815,7 +987,7 @@ public class QTLUpload implements UploadMarker {
 	@Override
 	public String getDataUploaded() {
 		String strDataUploaded = "";
-		if (null != arrayOfQTLs && arrayOfQTLs.length > 0){
+		//if (null != arrayOfQTLs && arrayOfQTLs.length > 0){
 			String strUploadInfo = "";
 
 			/*for (int i = 0; i < arrayOfQTLs.length; i++){
@@ -826,7 +998,7 @@ public class QTLUpload implements UploadMarker {
 			}*/
 
 			strDataUploaded = "Uploaded QTL(s): \n";
-		}	
+		//}	
 		return strDataUploaded;
 	}
 

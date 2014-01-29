@@ -1,8 +1,22 @@
 package org.icrisat.gdms.ui;
 
 
-import com.vaadin.Application;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URISyntaxException;
 
+import org.generationcp.middleware.exceptions.ConfigException;
+import org.generationcp.middleware.exceptions.MiddlewareQueryException;
+import org.generationcp.middleware.hibernate.HibernateSessionPerThreadProvider;
+import org.generationcp.middleware.hibernate.HibernateSessionProvider;
+import org.generationcp.middleware.hibernate.HibernateUtil;
+import org.generationcp.middleware.manager.WorkbenchDataManagerImpl;
+import org.generationcp.middleware.manager.api.WorkbenchDataManager;
+import org.generationcp.middleware.pojos.User;
+import org.icrisat.gdms.ui.common.GDMSModel;
+import org.icrisat.gdms.ui.common.HeadingOne;
+
+import com.vaadin.Application;
 import com.vaadin.terminal.ThemeResource;
 import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Component;
@@ -12,19 +26,14 @@ import com.vaadin.ui.Embedded;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.MenuBar;
+import com.vaadin.ui.MenuBar.MenuItem;
 import com.vaadin.ui.TabSheet;
 import com.vaadin.ui.TabSheet.SelectedTabChangeEvent;
 import com.vaadin.ui.TabSheet.SelectedTabChangeListener;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
-import com.vaadin.ui.MenuBar.MenuItem;
 import com.vaadin.ui.Window.Notification;
 import com.vaadin.ui.themes.Reindeer;
-
-import org.generationcp.middleware.exceptions.ConfigException;
-import org.generationcp.middleware.pojos.User;
-import org.icrisat.gdms.ui.common.GDMSModel;
-import org.icrisat.gdms.ui.common.HeadingOne;
 
 
 
@@ -51,16 +60,48 @@ public class GDMSMain extends Application implements Component.Listener {
 	private VerticalLayout buildWelcomeScreen;
 	private Window loginWindow;
 
-
+	 WorkbenchDataManager  workbenchManager;
+	 private static HibernateUtil hibernateUtil;
 	@Override
 	public void init() {
+		
+		/*try{			
+			System.out.println(GDMSModel.getGDMSModel().getWorkbenchParams().getDbName()+"  "+GDMSModel.getGDMSModel().getWorkbenchParams().getHost()+"   "+GDMSModel.getGDMSModel().getWorkbenchParams().getPort()+"   "+GDMSModel.getGDMSModel().getWorkbenchParams().getUsername()+"   "+GDMSModel.getGDMSModel().getWorkbenchParams().getPassword());
+			hibernateUtil = new HibernateUtil(GDMSModel.getGDMSModel().getWorkbenchParams());
+			HibernateSessionProvider sessionProvider = new HibernateSessionPerThreadProvider(hibernateUtil.getSessionFactory());
+			workbenchManager = new WorkbenchDataManagerImpl(sessionProvider);
+		}catch (FileNotFoundException e) {
+			//_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
+			return;
+		}catch (IOException ei) {
+			//_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
+			return;
+		}catch (URISyntaxException e) {
+			//_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
+			return;
+		}
+		*/
+		
 		try{
+			int userId=GDMSModel.getGDMSModel().getWorkbenchDataManager().getWorkbenchRuntimeData().getUserId();
+			User user1=	GDMSModel.getGDMSModel().getWorkbenchDataManager().getUserById(userId);
+			
 		_gdmsModel = GDMSModel.getGDMSModel();
-
+		User user2 = new User();
+		user2.setUserid(new Integer(user1.getUserid()));
+		user2.setName(user1.getName());
+		user2.setPassword(user1.getPassword());
+		_gdmsModel.setLoggedInUser(user2);
+		
 		setTheme("gdmstheme");
 
 		_main = new Window("Genotyping Data Management System (GDMS)");
-
+		//GDMSModel.getGDMSModel().getWorkbenchParams().getHibernateSessionProviderForCentral().getSession();
+		/*try{
+			System.out.println(".............  workbenchloogedin user:"+workbenchManager.getWorkbenchRuntimeData().getUserId());
+		}catch (MiddlewareQueryException e) {
+			e.printStackTrace();
+		}*/
 		_mainLayout = (VerticalLayout) _main.getContent();
 		_mainLayout.setMargin(false);
 		_mainLayout.setStyleName(Reindeer.LAYOUT_BLUE);
@@ -71,6 +112,8 @@ public class GDMSMain extends Application implements Component.Listener {
 		setMainWindow(_main);
 
 		buildMainView();
+		}catch (MiddlewareQueryException e) {
+			e.printStackTrace();
 		}catch (ConfigException e) {
 			e.printStackTrace();
 			//_mainHomePage.getMainWindow().getWindow().showNotification(e.getMessage(),  Notification.TYPE_ERROR_MESSAGE);
@@ -82,12 +125,13 @@ public class GDMSMain extends Application implements Component.Listener {
 	void buildMainView() {
 		_mainLayout.setSizeFull();
 
-		HorizontalLayout topMenuLayout = getTopMenu();
-		CssLayout headerImageLayout = getHeader();
-
+		
 		_lblLoginMessage = new Label("");
 		_lblLoginMessage.setStyleName(Reindeer.LABEL_H2);
 		
+		HorizontalLayout topMenuLayout = getTopMenu();
+		CssLayout headerImageLayout = getHeader();
+
 		VerticalLayout topLayout = new VerticalLayout();
 		topLayout.addComponent(headerImageLayout);
 		topLayout.addComponent(topMenuLayout);
@@ -162,6 +206,7 @@ public class GDMSMain extends Application implements Component.Listener {
 
 			public void selectedTabChange(SelectedTabChangeEvent event) {
 				User loggedInUser = _gdmsModel.getLoggedInUser();
+				//System.out.println("loggedInUser:"+loggedInUser);
 				if (null == loggedInUser){
 					if (!(buildWelcomeScreen == _tabsheet.getSelectedTab())){
 						getMainWindow().showNotification("Please login inorder to Upload, Retrieve or Delete data.", Notification.TYPE_HUMANIZED_MESSAGE);
@@ -302,6 +347,13 @@ public class GDMSMain extends Application implements Component.Listener {
 		} else {
 			_loginMenu = menubar.addItem("Logout", menuCommand);
 		}
+		
+
+		if (null != _gdmsModel.getLoggedInUser()){
+			_loginMenu.setEnabled(false);
+			uploadLoginDetailsOnMainWindow();
+		}
+		
 		horizontalLayout.addComponent(menubar);
 
 		return horizontalLayout;
@@ -316,11 +368,11 @@ public class GDMSMain extends Application implements Component.Listener {
 			String name = loggedInUser.getName();
 			setUser(loggedInUser);
 			_loginMenu.setText("Logout");
-			_lblLoginMessage.setCaption("Welcome " + name);
+			_lblLoginMessage.setValue("Welcome " + name + "!");
 		}
-		_mainLayout.addComponent(_lblLoginMessage);
-		_mainLayout.setComponentAlignment(_lblLoginMessage, Alignment.MIDDLE_LEFT);
-		_mainLayout.requestRepaintAll();
+		//_mainLayout.addComponent(_lblLoginMessage);
+		//_mainLayout.setComponentAlignment(_lblLoginMessage, Alignment.MIDDLE_LEFT);
+		//_mainLayout.requestRepaintAll();
 	}
 
 	/** Following method updates the contents of the Upload tab */
@@ -386,6 +438,7 @@ public class GDMSMain extends Application implements Component.Listener {
 
 
 		ThemeResource themeResource = new ThemeResource("images/GDMS.gif");
+		//ThemeResource themeResource = new ThemeResource("images/Banner3.jpg");
 		Embedded headerImage = new Embedded("", themeResource);
 
 		headerImage.setSizeFull();

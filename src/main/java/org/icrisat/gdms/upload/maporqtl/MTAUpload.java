@@ -392,11 +392,19 @@ public class MTAUpload implements UploadMarker {
 	@Override
 	public void createObjectsToBeSavedToDB() throws GDMSException {
 		System.out.println("!!!!!@@@@@@@@@@@@@@@@@@@@@#############################$$$$$$$$$$$$$$$$$$$$$$$%%%%%%%%%%%%%%%%%%%%%%%%^^^^^^^^^^^^^^^^^&&&&&&&&&&&&&&&&");
-		GermplasmDataManagerImpl germplasmDataManagerImpl = new GermplasmDataManagerImpl();
+		/*GermplasmDataManagerImpl germplasmDataManagerImpl = new GermplasmDataManagerImpl();
 		HibernateSessionProvider hibernateSessionProviderForLocal = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal();
 		germplasmDataManagerImpl.setSessionProviderForLocal(hibernateSessionProviderForLocal);
 		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		genoManager=factory.getGenotypicDataManager();
+		genoManager=factory.getGenotypicDataManager();*/
+		try{
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			genoManager=factory.getGenotypicDataManager();
+	
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+		
 		int iNumOfQTLDataRowsFromDataTable = listOfDataRowsFromDataTable.size();
 		
 		HashMap<String, String> hashMapOfSourceDataFields = listOfDataRowsFromSourceTable.get(0);
@@ -415,7 +423,7 @@ public class MTAUpload implements UploadMarker {
 		String strEmail = null;
 		String strPurposeOfStudy = null;
 		
-		if (null == strPrincipleInvestigator || strPrincipleInvestigator.equals("")) {
+		/*if (null == strPrincipleInvestigator || strPrincipleInvestigator.equals("")) {
 			WorkbenchDataManagerImpl workbenchDataManagerImpl = new WorkbenchDataManagerImpl(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
 			WorkbenchRuntimeData workbenchRuntimeData;
 			try {
@@ -429,9 +437,9 @@ public class MTAUpload implements UploadMarker {
 			} catch (MiddlewareQueryException e) {
 				throw new GDMSException(e.getMessage());
 			}
-		} else {
+		} else {*/
 			UserDAO userDAO = new UserDAO();
-			userDAO.setSession(hibernateSessionProviderForLocal.getSession());
+			userDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
 			List<User> listOfAllUsers =  null;
 			try {
 				listOfAllUsers = userDAO.getAll();
@@ -446,7 +454,7 @@ public class MTAUpload implements UploadMarker {
 			} catch (MiddlewareQueryException e) {
 				throw new GDMSException(e.getMessage());
 			}
-		}
+		//}
 		
 		
 		/*GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
@@ -604,8 +612,8 @@ public class MTAUpload implements UploadMarker {
 		/*GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
 		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
 		genotypicDataManagerImpl.setSessionProviderForCentral(null);*/
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		genoManager=factory.getGenotypicDataManager();
+		/*factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+		genoManager=factory.getGenotypicDataManager();*/
 		try{
 			genoManager.addMTA(dataset, mta, datasetUser);
 		}catch (MiddlewareQueryException e) {

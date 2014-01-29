@@ -41,6 +41,7 @@ import org.generationcp.middleware.pojos.gdms.Map;
 import org.generationcp.middleware.pojos.gdms.MappingPop;
 import org.generationcp.middleware.pojos.gdms.MarkerIdMarkerNameElement;
 import org.generationcp.middleware.pojos.gdms.ParentElement;
+import org.generationcp.middleware.pojos.workbench.Project;
 import org.hibernate.Session;
 import org.icrisat.gdms.common.ExportFileFormats;
 import org.icrisat.gdms.common.GDMSException;
@@ -48,6 +49,7 @@ import org.icrisat.gdms.ui.common.FileDownloadResource;
 import org.icrisat.gdms.ui.common.GDMSModel;
 import org.icrisat.gdms.ui.common.OptionWindowForFlapjackMap;
 
+import com.itextpdf.text.log.SysoLogger;
 import com.vaadin.data.Container;
 import com.vaadin.data.Item;
 import com.vaadin.data.Property;
@@ -109,10 +111,10 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 	GenotypicDataManager genoManager;
 	List<AllelicValueWithMarkerIdElement> alleleValues;
 	ArrayList intAlleleValues=new ArrayList();
+	String realPath="";
+	// private static WorkbenchDataManager workbenchDataManager;
+	// private static HibernateUtil hibernateUtil;
 	
-	private static WorkbenchDataManager workbenchDataManager;
-	private static HibernateUtil hibernateUtil;
-	 
 	private TreeMap<Integer, String> sortedMapOfGIDsAndGNames;
 	
 	int parentANid=0;
@@ -129,27 +131,31 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 	 String bPath="";
      String opPath="";
     
-     //System.out.println(",,,,,,,,,,,,,  :"+bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1));
+     ////System.out.println(",,,,,,,,,,,,,  :"+bPath.substring(0, bPath.indexOf("IBWorkflowSystem")-1));
      String pathWB="";
      
 	    String dbNameL="";
-	    
+	
+	
 	protected String strSelectedMappingType = "";
 	
 	public RetrieveDatasetInformationComponent(GDMSMain theMainHomePage){
 		_mainHomePage = theMainHomePage;
-		localSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
-		centralSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
 		try{
-			factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+			//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
 			germManager=factory.getGermplasmDataManager();
 			genoManager=factory.getGenotypicDataManager();
 			
 			//hibernateUtil = new HibernateUtil(workbenchDb.getHost(), workbenchDb.getPort(), workbenchDb.getDbName(), workbenchDb.getUsername(), workbenchDb.getPassword());
-			hibernateUtil = new HibernateUtil(GDMSModel.getGDMSModel().getWorkbenchParams());
+			/*hibernateUtil = new HibernateUtil(GDMSModel.getGDMSModel().getWorkbenchParams());
 			HibernateSessionProvider sessionProvider = new HibernateSessionPerThreadProvider(hibernateUtil.getSessionFactory());
-			workbenchDataManager = new WorkbenchDataManagerImpl(sessionProvider);
-		}catch (FileNotFoundException e) {
+			workbenchDataManager = new WorkbenchDataManagerImpl(sessionProvider);*/
+		/*}catch (FileNotFoundException e) {
 			_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
 			return;
 		}catch (IOException ei) {
@@ -157,7 +163,9 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 			return;
 		}catch (URISyntaxException e) {
 			_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
-			return;
+			return;*/
+		}catch (Exception e){
+			e.printStackTrace();
 		}
 	}
 
@@ -197,6 +205,7 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 	}
 
 	private Component buildDatasetDataSetComponent() {
+		
 		VerticalLayout datasetLayout = new VerticalLayout();
 		datasetLayout.setCaption("Dataset");
 		datasetLayout.setSpacing(true);
@@ -236,19 +245,20 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 						try{
 							//20131207:   Kalyani as datasetid is not shown its returning null
 							List<DatasetElement> resultsL =genoManager.getDatasetDetailsByDatasetName(strDatasetName, Database.LOCAL);
-							//System.out.println("from Local resultsL=:"+resultsL);
+							////System.out.println("from Local resultsL=:"+resultsL);
 							if(resultsL.isEmpty()){
-								//System.out.println("if null");
+								////System.out.println("if null");
 								resultsL = genoManager.getDatasetDetailsByDatasetName(strDatasetName, Database.CENTRAL);
 							}
 							for (DatasetElement result : resultsL){
-					        	//System.out.println("  " + result.getDatasetId());
+					        	////System.out.println("  " + result.getDatasetId());
 					        	strDatasetID=result.getDatasetId().toString();
 					        }
 							
 						
 						}catch (MiddlewareQueryException e) {
-							_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
+							//_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
+							e.printStackTrace();
 							return;
 						}
 						
@@ -260,20 +270,24 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 						//System.out.println("Dataset selected in the table: " + strDatasetID + " --- " + strDatasetName + " --- " + strDatasetType);
 						
 						VerticalLayout newFormatComponent = (VerticalLayout) buildDatasetFormatComponent();
-						_tabsheetForDataset.replaceComponent(_buildDatasetFormatComponent, newFormatComponent);
-						_buildDatasetFormatComponent = newFormatComponent;
-						_buildDatasetFormatComponent.requestRepaint();
-						_tabsheetForDataset.getTab(1).setEnabled(true);
-						_tabsheetForDataset.setSelectedTab(_buildDatasetFormatComponent);
-						_tabsheetForDataset.requestRepaint();
+						if (null != newFormatComponent) {
+							_tabsheetForDataset.replaceComponent(_buildDatasetFormatComponent, newFormatComponent);
+							_buildDatasetFormatComponent = newFormatComponent;
+							_buildDatasetFormatComponent.requestRepaint();
+							_tabsheetForDataset.getTab(1).setEnabled(true);
+							_tabsheetForDataset.setSelectedTab(_buildDatasetFormatComponent);
+							_tabsheetForDataset.requestRepaint();
+						}
 					}else {
 						if (null == strDatasetID || null == strDatasetName || null == strDatasetType){
 							_mainHomePage.getMainWindow().getWindow().showNotification("Please select the required dataset from the Dataset tab and click next.", Notification.TYPE_ERROR_MESSAGE);
+							
 							return;
 						}
 					}
 				} else {
 					_mainHomePage.getMainWindow().getWindow().showNotification("Please select the required dataset from the Dataset tab and click next.", Notification.TYPE_ERROR_MESSAGE);
+					
 					return;
 				}
 			}
@@ -316,7 +330,10 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 			listOfAllDatasetsFromLocalDB = datasetDAOForLocal.getAll();
 			listOfAllDatasetsFromCentralDB = datasetDAOForCentral.getAll();
 		} catch (MiddlewareQueryException e) {
+			e.printStackTrace();
+			
 			_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
+			
 			return null;
 		}
 		
@@ -352,6 +369,7 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 				String size=nidsCount+" x "+markerCount;
 				datasetSize.put(Integer.parseInt(dataset.getDatasetId().toString()), size);
 			} catch (MiddlewareQueryException e) {
+				e.printStackTrace();
 				_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
 				return null;
 			}
@@ -366,7 +384,7 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 			String strDatasetDesc = dataset.getDatasetDesc();
 			String strDatasetType = dataset.getDatasetType();
 			String strCount = "0";
-			//System.out.println("datasetIdsList=:"+datasetIdsList);			
+			////System.out.println("datasetIdsList=:"+datasetIdsList);			
 			//String strGenus = dataset.getGenus();
 			//String strSpecies = dataset.getSpecies();
 			//String strDataType = dataset.getDataType();
@@ -388,7 +406,7 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 	}
 
 	private Component buildDatasetFormatComponent() {
-		try{
+		/*try{
 			hibernateUtil = new HibernateUtil(GDMSModel.getGDMSModel().getWorkbenchParams());
 			HibernateSessionProvider sessionProvider = new HibernateSessionPerThreadProvider(hibernateUtil.getSessionFactory());
 			workbenchDataManager = new WorkbenchDataManagerImpl(sessionProvider);
@@ -402,14 +420,20 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 			_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
 			//return;
 		}
+		*/
+		
 		//20131212: Tulasi --- Implemented code to display Allelic and ABH options, 
 				//if the dataset selected on the first tab is of Mapping-Allelic type
 				strMappingType = "";
 				if (null != strDatasetType && strDatasetType.equalsIgnoreCase("Mapping")) {
 					
 					try {
-						
-						MappingPopDAO mappingPopDAOLocal = new MappingPopDAO();
+						List<ParentElement> results =genoManager.getParentsByDatasetId(Integer.parseInt(strDatasetID));
+						for (ParentElement parentElement : results){
+							
+							strMappingType=parentElement.getMappingType();
+						}
+						/*MappingPopDAO mappingPopDAOLocal = new MappingPopDAO();
 						mappingPopDAOLocal.setSession(localSession);
 						MappingPop mappingPopByIdLocal = mappingPopDAOLocal.getById(Integer.parseInt(strDatasetID));
 						if (null != mappingPopByIdLocal) {
@@ -424,7 +448,7 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 								strMappingType = mappingPopByIdCentral.getMappingType();
 							}
 						}
-						
+						*/
 					} catch (NumberFormatException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -538,23 +562,42 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 		listOfAllMaps = new ArrayList<Map>();
 		hmOfMapNameAndMapId = new HashMap<String, Integer>();
 		try {
-			
-			List<Map> listOfAllMapsLocal = mapDAOLocal.getAll();
-			List<Map> listOfAllMapsCentral = mapDAOCentral.getAll();
-			
-			for (Map map: listOfAllMapsLocal){
-				if (false == listOfAllMaps.contains(map)){
-					listOfAllMaps.add(map);
-					hmOfMapNameAndMapId.put(map.getMapName(), map.getMapId());
+			List<Map> resMapsCentral=genoManager.getAllMaps(0, (int)genoManager.countAllMaps(Database.CENTRAL), Database.CENTRAL);
+			if(!resMapsCentral.isEmpty()){
+				for (Map map: resMapsCentral){
+					if (false == listOfAllMaps.contains(map)){
+						listOfAllMaps.add(map);
+						hmOfMapNameAndMapId.put(map.getMapName(), map.getMapId());
+					}
 				}
 			}
+			List<Map> resMapsLocal=genoManager.getAllMaps(0, (int)genoManager.countAllMaps(Database.LOCAL), Database.LOCAL);
+			if(resMapsLocal.isEmpty()){
+				for (Map map: resMapsLocal){
+					if (false == listOfAllMaps.contains(map)){
+						listOfAllMaps.add(map);
+						hmOfMapNameAndMapId.put(map.getMapName(), map.getMapId());
+					}
+				}
+			}
+			/*List<Map> listOfAllMapsLocal = mapDAOLocal.getAll();
+			List<Map> listOfAllMapsCentral = mapDAOCentral.getAll();
+			if (null != listOfAllMapsLocal){
+				for (Map map: listOfAllMapsLocal){
+					if (false == listOfAllMaps.contains(map)){
+						listOfAllMaps.add(map);
+						hmOfMapNameAndMapId.put(map.getMapName(), map.getMapId());
+					}
+				}
+			}
+			if (null != listOfAllMapsCentral){
 			for (Map map: listOfAllMapsCentral){
 				if (false == listOfAllMaps.contains(map)){
 					listOfAllMaps.add(map);
 					hmOfMapNameAndMapId.put(map.getMapName(), map.getMapId());
 				}
 			}
-			
+			}*/
 			if (null != listOfAllMaps){
 				for (int i = 0; i < listOfAllMaps.size(); i++){
 					Map map = listOfAllMaps.get(i);
@@ -563,7 +606,9 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 			}
 			
 		} catch (MiddlewareQueryException e) {
+			e.printStackTrace();
 			_mainHomePage.getMainWindow().getWindow().showNotification(e.getMessage(),  Notification.TYPE_ERROR_MESSAGE);
+			
 			return null;
 		}
 		chbFlapjack = new CheckBox();
@@ -670,7 +715,7 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 				//if the Dataset row selected on the the first tab is of Mapping-Allelic type
 				if (chbMatrix.getValue().toString().equals("true")){
 					strSelectedFormat = "Matrix";
-					//System.out.println("Format Selected: " + strSelectedFormat);
+					////System.out.println("Format Selected: " + strSelectedFormat);
 
 					/*if (null == strDatasetID || null == strDatasetName || null == strDatasetType){
 						_mainHomePage.getMainWindow().getWindow().showNotification("Please select the required dataset from the Dataset tab and click next.", Notification.TYPE_ERROR_MESSAGE);
@@ -685,13 +730,13 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 						_mainHomePage.getMainWindow().getWindow().showNotification(e1.getExceptionMessage(), Notification.TYPE_ERROR_MESSAGE);
 						return;
 					}
-					//System.out.println("intAlleleValues="+intAlleleValues);
+					////System.out.println("intAlleleValues="+intAlleleValues);
 					if (dataToBeExportedBuiltSuccessfully) {
 						ExportFileFormats exportFileFormats = new ExportFileFormats();
 						try {
 							if ((strDatasetType.equalsIgnoreCase("SSR"))||(strDatasetType.equalsIgnoreCase("DArT"))){
 								if (markersCount > 252){
-									listOfmatrixTextFileDataSSRDataset = exportFileFormats.MatrixTextFileDataSSRDataset(_mainHomePage, listOfAllelicValueWithMarkerIdElements, listOfNIDs, listOfAllMarkers, hmOfNIDAndNVal, hmOfMIdAndMarkerName);
+									matrixFileForDatasetRetrieval = exportFileFormats.MatrixTextFileDataSSRDataset(_mainHomePage, listOfAllelicValueWithMarkerIdElements, listOfNIDs, listOfAllMarkers, hmOfNIDAndNVal, hmOfMIdAndMarkerName);
 								} else {
 									matrixFileForDatasetRetrieval = exportFileFormats.MatrixForSSRDataset(_mainHomePage, listOfAllelicValueWithMarkerIdElements, listOfNIDs, listOfAllMarkers, hmOfNIDAndNVal, hmOfMIdAndMarkerName);
 								}
@@ -700,7 +745,11 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 								matrixFileForDatasetRetrieval = exportFileFormats.MatrixForDArtDataset(_mainHomePage, listOfAllelicValueElements, listOfNIDs, listOfAllMarkers, hmOfNIDAndNVal);
 							}*/
 							if (strDatasetType.equalsIgnoreCase("SNP")){
-								matrixFileForDatasetRetrieval = exportFileFormats.MatrixForSNPDataset(_mainHomePage, listOfAllelicValueWithMarkerIdElements, listOfNIDs, listofMarkerNamesForSNP, hmOfNIDAndNVal, hmOfMIdAndMarkerName);
+								if (markersCount > 252){
+									matrixFileForDatasetRetrieval = exportFileFormats.MatrixTextFileDataSSRDataset(_mainHomePage, listOfAllelicValueWithMarkerIdElements, listOfNIDs, listOfAllMarkers, hmOfNIDAndNVal, hmOfMIdAndMarkerName);
+								} else {
+									matrixFileForDatasetRetrieval = exportFileFormats.MatrixForSNPDataset(_mainHomePage, listOfAllelicValueWithMarkerIdElements, listOfNIDs, listofMarkerNamesForSNP, hmOfNIDAndNVal, hmOfMIdAndMarkerName);
+								}
 							}
 							if (strDatasetType.equalsIgnoreCase("mapping")){
 								matrixFileForDatasetRetrieval = exportFileFormats.MatrixForMappingDataset(_mainHomePage, intAlleleValues, parentsListToWrite, listOfNIDs, listofMarkerNamesForSNP, sortedMapOfGIDsAndGNames, hmOfMIdAndMarkerName);
@@ -708,10 +757,11 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 
 						} catch (GDMSException e) {
 							_mainHomePage.getMainWindow().getWindow().showNotification("Error generating Matrix file", Notification.TYPE_ERROR_MESSAGE);
+							e.printStackTrace();
 							return;
 						}
 
-						//System.out.println("Received the generated Matrix file.");
+						////System.out.println("Received the generated Matrix file.");
 					}
 
 				}  else if (chbFlapjack.getValue().toString().equals("true")){
@@ -843,8 +893,8 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 					}*/
 
 
-					//System.out.println("retrieveDatasetDetailsForMatrixFormat():");
-					//System.out.println("DatasetName: " + strDatasetName + " --- " + "Dataset-ID: " + strDatasetID + " --- " +
+					////System.out.println("retrieveDatasetDetailsForMatrixFormat():");
+					////System.out.println("DatasetName: " + strDatasetName + " --- " + "Dataset-ID: " + strDatasetID + " --- " +
 							//"Dataset-Type:" + strDatasetType);
 					if (bGenerateFlapjack) {
 						RetrieveDataForFlapjack retrieveDataForFlapjack = new RetrieveDataForFlapjack(_mainHomePage);
@@ -942,26 +992,37 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 
 	protected void retrieveDatasetDetailsForMatrixFormat() throws GDMSException {
 		
-		/*System.out.println("retrieveDatasetDetailsForMatrixFormat():");
-		System.out.println("DatasetName: " + strDatasetName + " --- " + "Dataset-ID: " + strDatasetID + " --- " +
-		                   "Dataset-Type:" + strDatasetType);*/
+		//System.out.println("retrieveDatasetDetailsForMatrixFormat():");
+		//System.out.println("DatasetName: " + strDatasetName + " --- " + "Dataset-ID: " + strDatasetID + " --- " +
+		                 //  "Dataset-Type:" + strDatasetType);
 		
 		ArrayList<Integer> listOfDatasetID = new ArrayList<Integer>();
 		listOfDatasetID.add(Integer.parseInt(strDatasetID));
 		listofMarkerNamesForSNP = new ArrayList<String>();
-		
+		/*try{
+			WorkbenchSetting workbenchSettings;			
+			workbenchSettings = manager.getWorkbenchSetting();
+			
+			//System.out.println("#################  :"+manager.getWorkbenchSetting().getInstallationDirectory());
+			////System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@   :"+manager.getWorkbenchSetting().getInstallationDirectory());
+			//System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@   :"+manager.getProjects());
+		}catch (MiddlewareQueryException e) {
+			_mainHomePage.getMainWindow().getWindow().showNotification("Error retrieving Dataset details.", Notification.TYPE_ERROR_MESSAGE);
+			return;
+		}*/
 		if (strDatasetType.equalsIgnoreCase("mapping")){
 			
-			MappingPopDAO mappingPopDAOLocal = new MappingPopDAO();
+			/*MappingPopDAO mappingPopDAOLocal = new MappingPopDAO();
 			mappingPopDAOLocal.setSession(localSession);
 			MappingPopDAO mappingPopDAOCentral = new MappingPopDAO();
-			mappingPopDAOCentral.setSession(centralSession);
+			mappingPopDAOCentral.setSession(centralSession);*/
 			listOfAllParents = new ArrayList<ParentElement>();
 			try {
 				List<ParentElement> results =genoManager.getParentsByDatasetId(Integer.parseInt(strDatasetID));
 				for (ParentElement parentElement : results){
 					parentANid=parentElement.getParentANId();
 					parentBNid=parentElement.getParentBGId();
+					//parentElement.getMappingType()
 					mappingType=parentElement.getMappingType();
 				}
 				Name namesA = null;
@@ -986,22 +1047,18 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 				for(int m=0; m<markers.size(); m++){
 					intAlleleValues.add(parentBGid+"!~!"+markers.get(m)+"!~!"+"B");
 				}
-				List<ParentElement> listOfParentsByDatasetIdLocal = mappingPopDAOLocal.getParentsByDatasetId(Integer.parseInt(strDatasetID));
-				List<ParentElement> listOfParentsByDatasetIdCentral = mappingPopDAOCentral.getParentsByDatasetId(Integer.parseInt(strDatasetID));
-				if (null != listOfParentsByDatasetIdLocal){
-					for (ParentElement parentElement : listOfParentsByDatasetIdLocal){
-						if (false == listOfAllParents.contains(parentElement)){
-							listOfAllParents.add(parentElement);
-						}
-					}
+				
+				try{
+					List<ParentElement> listOfAllParents=genoManager.getParentsByDatasetId(Integer.parseInt(strDatasetID));
+					
+				} catch (MiddlewareQueryException e) {
+					e.printStackTrace();
+					//_mainHomePage.getMainWindow().getWindow().showNotification("Error Retrieving ParentElements for the selected Dataset", Notification.TYPE_ERROR_MESSAGE);
+					String strErrMessage = "Error Retrieving ParentElements for the selected Dataset";
+					throw new GDMSException(strErrMessage);
+					
 				}
-				if (null != listOfParentsByDatasetIdCentral){
-					for (ParentElement parentElement : listOfParentsByDatasetIdCentral){
-						if (false == listOfAllParents.contains(parentElement)){
-							listOfAllParents.add(parentElement);
-						}
-					}
-				}
+				
 			} catch (NumberFormatException e) {
 				//_mainHomePage.getMainWindow().getWindow().showNotification("Error Retrieving ParentElements for the selected Dataset", Notification.TYPE_ERROR_MESSAGE);
 				String strErrMessage = "Error Retrieving ParentElements for the selected Dataset";
@@ -1041,40 +1098,24 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 		
 		List<Integer> listOfAllMIDsForSelectedDatasetID = new ArrayList<Integer>();
 		hmOfMIdAndMarkerName = new HashMap<Integer, String>();
+		hmOfMarkerNamerAndMId = new HashMap<String, Integer>();
 		try {
-			/**
-			 * commented by Kalyani on 22 nov 2013 
-			 */
 			
-			/*List<Integer> listOfMarkerIDsLocal = markerMetadataSetDAOLocal.getMarkerIdByDatasetId(Integer.parseInt(strDatasetID));
-			List<Integer> listOfMarkerIDsCentral = markerMetadataSetDAOCentral.getMarkerIdByDatasetId(Integer.parseInt(strDatasetID));
-			if (null != listOfMarkerIDsLocal){
-				for (Integer iMID : listOfMarkerIDsLocal){
-					if (false == listOfAllMIDsForSelectedDatasetID.contains(iMID)){
-						listOfAllMIDsForSelectedDatasetID.add(iMID);
-					}
-				}
-			}
-			if (null != listOfMarkerIDsCentral) {
-				for (Integer iMID : listOfMarkerIDsCentral){
-					if (false == listOfAllMIDsForSelectedDatasetID.contains(iMID)){
-						listOfAllMIDsForSelectedDatasetID.add(iMID);
-					}
-				}
-			}*/
 			ArrayList LocalList=new ArrayList();
 			ArrayList centralList=new ArrayList();
 			listOfAllMarkers = new ArrayList<MarkerIdMarkerNameElement>();
 			listOfAllMIDsForSelectedDatasetID=genoManager.getMarkerIdsByDatasetId(Integer.parseInt(strDatasetID));
+			
 			//genoManager.getMarkerNamesByMarkerIds(listOfAllMIDsForSelectedDatasetID);
 			List<MarkerIdMarkerNameElement> markerNames = genoManager.getMarkerNamesByMarkerIds(listOfAllMIDsForSelectedDatasetID);
-	        //System.out.println("testGetMarkerNamesByMarkerIds(" + listOfAllMIDsForSelectedDatasetID + ") RESULTS: ");
+	        ////System.out.println("testGetMarkerNamesByMarkerIds(" + listOfAllMIDsForSelectedDatasetID + ") RESULTS: ");
 			markersCount=markerNames.size();
 	        for (MarkerIdMarkerNameElement e : markerNames) {
-	            //System.out.println(e.getMarkerId() + " : " + e.getMarkerName()+"    "+markerNames.size());
+	            ////System.out.println(e.getMarkerId() + " : " + e.getMarkerName()+"    "+markerNames.size());
 	            listOfAllMarkers.add(e);
 	            listofMarkerNamesForSNP.add(e.getMarkerName().toString());
 	            hmOfMIdAndMarkerName.put(e.getMarkerId(), e.getMarkerName().toString());
+	            hmOfMarkerNamerAndMId.put(e.getMarkerName().toString(), e.getMarkerId());
 	        }
 			
 		} catch (NumberFormatException e) {
@@ -1098,11 +1139,11 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 			if (strDatasetType.equalsIgnoreCase("mapping")){
 				List<Integer> parentNIDs = new ArrayList<Integer>();
 				try {
-					//System.out.println("               <<<<<<<<<<<<<   :"+genoManager.getParentsByDatasetId(Integer.parseInt(strDatasetID)));
+					////System.out.println("               <<<<<<<<<<<<<   :"+genoManager.getParentsByDatasetId(Integer.parseInt(strDatasetID)));
 					 List<ParentElement> results = genoManager.getParentsByDatasetId(Integer.parseInt(strDatasetID));
-					 //System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  :"+results.get(0).getParentANId());
-					// System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  :"+results.get(0).getParentBGId());
-					// System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  :"+results.get(0).getMappingType());
+					 /*//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  :"+results.get(0).getParentANId());
+					 //System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  :"+results.get(0).getParentBGId());
+					 //System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  :"+results.get(0).getMappingType());*/
 					 parentNIDs.add(results.get(0).getParentANId());
 					 parentNIDs.add(results.get(0).getParentBGId());
 					 mappingType=results.get(0).getMappingType();
@@ -1111,13 +1152,15 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 						for(int n=0;n<parentNIDs.size();n++){
 							
 							names=germManager.getGermplasmNameByID(Integer.parseInt(parentNIDs.get(n).toString()));
-							//System.out.println(names.getNval()+","+names.getGermplasmId());
+							////System.out.println(names.getNval()+","+names.getGermplasmId());
 							//if(!germNames.contains(names.getNval()+","+names.getGermplasmId()))
+							if(!listOfNIDs.contains(names.getGermplasmId())){
 								listOfNIDs.add(names.getGermplasmId());
 								hmOfNIDAndNVal.put(names.getGermplasmId(),names.getNval());
+							}
 								
 						}
-				     //   System.out.println("testGetParentsByDatasetId(" + datasetId + ") RESULTS: " + results);
+				     //   //System.out.println("testGetParentsByDatasetId(" + datasetId + ") RESULTS: " + results);
 				}catch (MiddlewareQueryException e) {
 					//_mainHomePage.getMainWindow().getWindow().showNotification("Error Retrieving NIDs for selected Dataset", Notification.TYPE_ERROR_MESSAGE);
 					String strErrMessage = "Error Retrieving NIDs for selected Dataset";
@@ -1125,7 +1168,7 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 				}
 			}
 				
-			//System.out.println("hmOfNIDAndNVal=:"+hmOfNIDAndNVal);
+			////System.out.println("hmOfNIDAndNVal=:"+hmOfNIDAndNVal);
 			
 		try {
 			/**
@@ -1163,9 +1206,10 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 				
 				names=germManager.getGermplasmNameByID(Integer.parseInt(nidsList.get(n).toString()));
 				//if(!germNames.contains(names.getNval()+","+names.getGermplasmId()))
+				if(!listOfNIDs.contains(names.getGermplasmId())){
 					listOfNIDs.add(names.getGermplasmId());
 					hmOfNIDAndNVal.put(names.getGermplasmId(),names.getNval());
-					
+				}
 			}
 			
 		} catch (MiddlewareQueryException e) {
@@ -1173,7 +1217,7 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 			String strErrMessage = "Error Retrieving Names by NIds for selected Dataset";
 			throw new GDMSException(strErrMessage);
 		}
-		//System.out.println("**********************  listOfNIDs="+listOfNIDs);	
+		////System.out.println("**********************  listOfNIDs="+listOfNIDs);	
 		sortedMapOfGIDsAndGNames = new TreeMap<Integer, String>();
 		Set<Integer> gidKeySet = hmOfNIDAndNVal.keySet();
 		Iterator<Integer> gidIterator = gidKeySet.iterator();
@@ -1182,11 +1226,14 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 			String gname = hmOfNIDAndNVal.get(gid);
 			sortedMapOfGIDsAndGNames.put(gid, gname);
 		}
+		
+		//System.out.println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$  strDatasetType:"+strDatasetType);
+		
 		if ((strDatasetType.equalsIgnoreCase("SSR"))||(strDatasetType.equalsIgnoreCase("DArT"))){
 			listOfAllelicValueWithMarkerIdElements = new ArrayList<AllelicValueWithMarkerIdElement>();
 			try {			
 				List<AllelicValueWithMarkerIdElement> allelicValues = genoManager.getAllelicValuesFromAlleleValuesByDatasetId(Integer.parseInt(strDatasetID), 0, (int)genoManager.countAllelicValuesFromAlleleValuesByDatasetId(Integer.parseInt(strDatasetID)));
-				//System.out.println(allelicValues.size());
+				////System.out.println(allelicValues.size());
 				for(AllelicValueWithMarkerIdElement results : allelicValues) {
 					listOfAllelicValueWithMarkerIdElements.add(results);
 					
@@ -1220,9 +1267,10 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 				alleleValues = genoManager.getAllelicValuesFromMappingPopValuesByDatasetId(Integer.parseInt(strDatasetID), 0, (int)genoManager.countAllelicValuesFromMappingPopValuesByDatasetId(Integer.parseInt(strDatasetID)));
 				for(AllelicValueWithMarkerIdElement results : alleleValues) {
 					//listOfAllAllelicValuesForSSRandDArtDatasetType.add(results);
+					////System.out.println(results);
 					intAlleleValues.add(results.getGid()+"!~!"+results.getMarkerId()+"!~!"+results.getData());
 		        }
-				//System.out.println(intAlleleValues);
+				////System.out.println(intAlleleValues);
 			} catch (MiddlewareQueryException e) {
 				//_mainHomePage.getMainWindow().getWindow().showNotification("Error Retrieving Mapping AllelicValueElements for the selected Dataset", Notification.TYPE_ERROR_MESSAGE);
 				String strErrMessage = "Error Retrieving Mapping AllelicValueElements for the selected Dataset";
@@ -1240,7 +1288,7 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 
 		File baseDirectory = _mainHomePage.getMainWindow().getApplication().getContext().getBaseDirectory();
 		File absoluteFile = baseDirectory.getAbsoluteFile();
-		//System.out.println("buildDatasetResultComponent(): " + absoluteFile);
+		////System.out.println("buildDatasetResultComponent(): " + absoluteFile);
 		File[] listFiles = absoluteFile.listFiles();
 		File fileExport = baseDirectory;
 		for (File file : listFiles) {
@@ -1250,7 +1298,7 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 			}
 		}
 		final String strAbsolutePath = fileExport.getAbsolutePath();
-		//System.out.println(">>>>>" + strAbsolutePath);
+		////System.out.println(">>>>>" + strAbsolutePath);
 				
 		
 		Button btnAllFlapjackFiles = new Button("View All Generated Files");
@@ -1312,16 +1360,20 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 		});
 		
 		final String strFJVisualizeLink = strAbsolutePath + "\\" + "flapjackrun.bat";
-		//System.out.println(strFJVisualizeLink);
+		//System.out.println(_mainHomePage.getMainWindow().getApplication().getContext().getBaseDirectory());
+		realPath=_mainHomePage.getMainWindow().getApplication().getContext().getBaseDirectory().toString();
 		Button btnVisualizeFJ = new Button("Visualize in Flapjack");
 		btnVisualizeFJ.setStyleName(Reindeer.BUTTON_LINK);
 		btnVisualizeFJ.addListener(new Button.ClickListener() {
 			private static final long serialVersionUID = 1L;
 			public void buttonClick(ClickEvent event) {
-				//System.out.println("Trying to execute the flapjackrun.bat file.");
-				
+				////System.out.println("Trying to execute the flapjackrun.bat file.");
+				File fexists=new File(realPath+"/Flapjack/Flapjack.flapjack");
+				if(fexists.exists()) { fexists.delete(); 
+				////System.out.println("proj exists and deleted");
+				}
 				String[] cmd = {"cmd.exe", "/c", "start", "\""+"flapjack"+"\"", strFJVisualizeLink};
-				Runtime rt = Runtime.getRuntime();	
+				Runtime rt = Runtime.getRuntime();				
 				try {
 					rt.exec(cmd);
 				} catch (IOException e) {
@@ -1371,7 +1423,7 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 		}
 
 
-		//System.out.println("Selected Format: buildDatasetResultComponent(): " + strSelectedFormat);
+		////System.out.println("Selected Format: buildDatasetResultComponent(): " + strSelectedFormat);
 		//20131216: Added link to download Similarity Matrix File
 		final String strSMVisualizeLink = strAbsolutePath + "\\" + "flapjackMatrix.bat";
 		Button similarityMatrixButton = new Button("Show Similarity Matrix");
@@ -1389,6 +1441,7 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 				
 				} catch (IOException e) {
 					_mainHomePage.getMainWindow().getWindow().showNotification("Error occurred while trying to create Similarity Matrix.", Notification.TYPE_ERROR_MESSAGE);
+					e.printStackTrace();
 					return;
 				}
 				/*FileResource fileResource = new FileResource(similarityMatrixFile, _mainHomePage);
@@ -1402,7 +1455,8 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 				resultsLayout.addComponent(btnVisualizeFJ);
 				resultsLayout.addComponent(similarityMatrixButton);
 			} else if (strSelectedFormat.equals("Matrix")) {
-				if (null != matrixFileForDatasetRetrieval && true == matrixFileForDatasetRetrieval.toString().endsWith(".xls")){
+				//if (null != matrixFileForDatasetRetrieval && true == matrixFileForDatasetRetrieval.toString().endsWith(".xls")){
+				if (null != matrixFileForDatasetRetrieval && (true == matrixFileForDatasetRetrieval.toString().endsWith(".xls")||true == matrixFileForDatasetRetrieval.toString().endsWith(".txt"))){
 					resultsLayout.addComponent(gtpExcelFileLink);
 				} else {
 					layoutForExportTypes.addComponent(excelButton, 0);
@@ -1432,6 +1486,7 @@ public class RetrieveDatasetInformationComponent implements Component.Listener {
 	List<Integer> nidsList=null;
 	private ArrayList<MarkerIdMarkerNameElement> listOfAllMarkers;
 	private HashMap<Integer, String> hmOfMIdAndMarkerName;
+	private HashMap<String, Integer> hmOfMarkerNamerAndMId;
 	private ArrayList<AllelicValueElement> listOfAllelicValueElements;
 	private ArrayList<String> listofMarkerNamesForSNP;
 	private ArrayList<ParentElement> listOfAllParents;

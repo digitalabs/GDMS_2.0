@@ -17,6 +17,7 @@ import org.generationcp.middleware.manager.api.OntologyDataManager;
 import org.generationcp.middleware.pojos.gdms.Marker;
 import org.generationcp.middleware.pojos.gdms.QtlDetailElement;
 import org.icrisat.gdms.common.ExportFileFormats;
+import org.icrisat.gdms.common.GDMSException;
 import org.icrisat.gdms.retrieve.RetrieveQTL;
 import org.icrisat.gdms.ui.common.GDMSModel;
 
@@ -59,8 +60,18 @@ public class RetrieveQTLInformationComponent implements Component.Listener {
 	
 	public RetrieveQTLInformationComponent(GDMSMain theMainHomePage){
 		_mainHomePage = theMainHomePage;
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		om=factory.getOntologyDataManager();
+		//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+		try{
+			//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			
+			/*localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			*/
+			om=factory.getOntologyDataManager();
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -538,7 +549,6 @@ public class RetrieveQTLInformationComponent implements Component.Listener {
 					@Override
 					public void buttonClick(ClickEvent event) {
 						QtlDetailsDAO qtlDetailsDAO = new QtlDetailsDAO();
-						qtlDetailsDAO.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
 						
 						String qtlName = strQTLName;
 						String chromosome = strChromosome;
@@ -546,10 +556,11 @@ public class RetrieveQTLInformationComponent implements Component.Listener {
 						int intMaxValue = fMaxPosition.intValue();
 						
 						try {
+							qtlDetailsDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
 							
 							List<Integer> markerIdsByQtl = qtlDetailsDAO.getMarkerIdsByQtl(qtlName, chromosome, intMinValue, intMaxValue);
 							MarkerDAO markerDAO = new MarkerDAO();
-							markerDAO.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+							markerDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession());
 							long lCntMarkersByIds = markerDAO.countMarkersByIds(markerIdsByQtl);
 							List<Marker> listOfMarkersByIds = markerDAO.getMarkersByIds(markerIdsByQtl, 0, (int)lCntMarkersByIds);
 							
@@ -583,7 +594,9 @@ public class RetrieveQTLInformationComponent implements Component.Listener {
 						} catch (MiddlewareQueryException e) {
 							_mainHomePage.getMainWindow().getWindow().showNotification(e.getMessage(), Notification.TYPE_ERROR_MESSAGE);
 							return;
-						}						
+						} catch (GDMSException e){
+							e.printStackTrace();
+						}
 					}
 				});
 				

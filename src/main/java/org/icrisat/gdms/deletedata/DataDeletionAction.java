@@ -27,6 +27,12 @@ public class DataDeletionAction {
 	
 	public DataDeletionAction(GDMSMain mainHomePage) {
 		_mainHomePage = mainHomePage;
+		try {
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			genoManager=factory.getGenotypicDataManager();
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 	}
 
 
@@ -38,10 +44,12 @@ public class DataDeletionAction {
 		Session session = hibernateSessionProviderForLocal.getSession();
 		Transaction beginTransaction = session.beginTransaction();*/
 		
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		GenotypicDataManager genoManager=factory.getGenotypicDataManager();
+		//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+		
 		
 		try {
+			/*factory=GDMSModel.getGDMSModel().getManagerFactory();
+			genoManager=factory.getGenotypicDataManager();*/
 			String strDisplayMessage = "Successfully deleted following QTL \n\n";
 			int iCount = 1;
 			for (String string : itemsToDelete) {
@@ -94,15 +102,12 @@ public class DataDeletionAction {
 		if(null == itemsToDelete) {
 			return false;
 		}
-		/*HibernateSessionProvider hibernateSessionProviderForLocal = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal();
-		Session session = hibernateSessionProviderForLocal.getSession();
-		Transaction beginTransaction = session.beginTransaction();*/
-		
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		GenotypicDataManager genoManager=factory.getGenotypicDataManager();
 		
 		Integer mapid = 0;
 		try {
+			/*factory=GDMSModel.getGDMSModel().getManagerFactory();
+			GenotypicDataManager genoManager=factory.getGenotypicDataManager();
+			*/
 			String strDisplayMessage = "Successfully deleted following Map \n\n";
 			//System.out.println(".............   Maps data");
 			int iCount = 1;
@@ -178,13 +183,11 @@ public class DataDeletionAction {
 		}
 		
 		boolean bDataDeleted = true;
+		try{
+			
+		//HibernateSessionProvider hibernateSessionProviderForLocal = GDMSModel.getGDMSModel().getManagerFactory().getSessionFactoryForLocal().getCurrentSession();
+		Session session = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
 		
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		GenotypicDataManager genoManager=factory.getGenotypicDataManager();
-		
-		
-		HibernateSessionProvider hibernateSessionProviderForLocal = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal();
-		Session session = hibernateSessionProviderForLocal.getSession();
 		Transaction beginTransaction = session.beginTransaction();
 		
 		String strDisplayMessage = "Successfully deleted following Genotyping \n\n";
@@ -209,7 +212,7 @@ public class DataDeletionAction {
 					datasetID = datasetElement.getDatasetId();
 					datasetType = datasetElement.getDatasetType();
 				}
-				//System.out.println("datasetID="+datasetID+"    datasetType:"+datasetType);
+				System.out.println("datasetID="+datasetID+"    datasetType:"+datasetType);
 				if(datasetType.equalsIgnoreCase("SNP")){
 										
 					genoManager.deleteSNPGenotypingDatasets(datasetID);
@@ -347,6 +350,9 @@ public class DataDeletionAction {
 				message += "<br>" + cause.getMessage();
 			}
 			_mainHomePage.getMainWindow().getWindow().showNotification(message,  Notification.TYPE_ERROR_MESSAGE);
+		}
+		}catch (Exception e){
+			e.printStackTrace();
 		}
 		return false;
 	}

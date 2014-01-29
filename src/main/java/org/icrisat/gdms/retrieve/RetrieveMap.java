@@ -16,8 +16,14 @@ public class RetrieveMap {
 	private Session localSession;
 	private Session centralSession;
 	public RetrieveMap() {
-		localSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
-		centralSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
+		try{
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 	}
 	
 	public List<MappingData> retrieveMappingData() throws MiddlewareQueryException {

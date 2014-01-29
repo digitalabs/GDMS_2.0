@@ -226,8 +226,16 @@ public class MapUpload implements UploadMarker {
 
 	@Override
 	public void createObjectsToBeSavedToDB() throws GDMSException {
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		genoManager=factory.getGenotypicDataManager();
+		
+		try{
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			genoManager=factory.getGenotypicDataManager();
+	
+			
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+		
 		int marker_id=0;
 		Database instance = Database.LOCAL;
 		try{
@@ -245,7 +253,7 @@ public class MapUpload implements UploadMarker {
 		 */
 		String datasetSelectedOnTheUI = GDMSModel.getGDMSModel().getDatasetSelected();
 		DatasetDAO datasetDAO = new DatasetDAO();
-		datasetDAO.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		datasetDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
 		
 		Integer datasetId = null;
 		try {
@@ -459,8 +467,8 @@ public class MapUpload implements UploadMarker {
 		/*GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
 		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
 		genotypicDataManagerImpl.setSessionProviderForCentral(null);*/
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		genoManager=factory.getGenotypicDataManager();
+		/*factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+		genoManager=factory.getGenotypicDataManager();*/
 		try {
 			genoManager.setMaps(marker, markerOnMap, map);
 		} catch (MiddlewareQueryException e) {

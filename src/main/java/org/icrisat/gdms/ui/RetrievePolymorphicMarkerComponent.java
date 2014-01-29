@@ -32,6 +32,7 @@ import org.generationcp.middleware.pojos.gdms.Map;
 import org.generationcp.middleware.pojos.gdms.MappingData;
 import org.generationcp.middleware.pojos.gdms.MarkerOnMap;
 import org.generationcp.middleware.pojos.gdms.QtlDetails;
+import org.hibernate.Session;
 import org.icrisat.gdms.common.ExportFileFormats;
 import org.icrisat.gdms.common.GDMSException;
 import org.icrisat.gdms.retrieve.marker.RetrievePolymorphicMarker;
@@ -50,7 +51,6 @@ import com.vaadin.ui.AbstractTextField.TextChangeEventMode;
 import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Button.ClickEvent;
-import com.vaadin.ui.Button.ClickListener;
 import com.vaadin.ui.CheckBox;
 import com.vaadin.ui.ComboBox;
 import com.vaadin.ui.Component;
@@ -101,13 +101,16 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 	OntologyDataManager om;
 	GenotypicDataManager genoManager;
 	
+	private Session centralSession;
+	private Session localSession;
+	
 	ArrayList geno1=new ArrayList();
 	ArrayList geno2=new ArrayList();
 	ArrayList mark1=new ArrayList();
 	ArrayList mark2=new ArrayList();
 	ArrayList ch1=new ArrayList();
 	ArrayList ch2=new ArrayList();
-	
+	ArrayList listOfMarkers=new ArrayList();
 	ArrayList mList1=new ArrayList();
 	ArrayList mList2=new ArrayList();
 	ArrayList mFinalList=new ArrayList();
@@ -123,9 +126,19 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 	
 	public RetrievePolymorphicMarkerComponent(GDMSMain theMainHomePage){
 		_mainHomePage = theMainHomePage;
-		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		om=factory.getOntologyDataManager();
-		genoManager=factory.getGenotypicDataManager();
+		//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+		try{
+			//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+			om=factory.getOntologyDataManager();
+			genoManager=factory.getGenotypicDataManager();
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -214,8 +227,12 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 					}
 					
 				} catch (GDMSException e1) {
-					//_mainHomePage.getMainWindow().getWindow().showNotification("Error Retrieving Names for Line1", Notification.TYPE_ERROR_MESSAGE);
-					//return null;
+					String strErrorMessage = "Error retrieving data for Line-1.";
+					if (null != e1.getExceptionMessage()){
+						strErrorMessage = e1.getExceptionMessage();
+					}
+					_mainHomePage.getMainWindow().getWindow().showNotification(strErrorMessage, Notification.TYPE_ERROR_MESSAGE);
+					return;
 				}
 			}
 		});
@@ -290,14 +307,18 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 				
 					if (name.getNval().equals(strSelectedNameValue)){
 						iGermplasmId = name.getGermplasmId();
-						/*System.out.println("   ,,,,,,,,,,,,,   line 1 selected:"+iGermplasmId);
-						System.out.println("%%%%%%%%%%%%%%%%%%%%%% option seleted:"+strSelectedPolymorphicType);*/
+						//System.out.println("   ,,,,,,,,,,,,,   line 1 selected:"+iGermplasmId);
+						//System.out.println("%%%%%%%%%%%%%%%%%%%%%% option seleted:"+strSelectedPolymorphicType);
 						try {
 							//listOfNamesForLine2 = retrievePolymorphicMarker.getNames(iGermplasmId);
 							listOfNamesForLine2 = retrievePolymorphicMarker.getNames(strSelectedNameValue, strSelectedPolymorphicType);
 							break;
 						} catch (GDMSException e) {
-							_mainHomePage.getMainWindow().getWindow().showNotification("Error Retrieving Names for Line2", Notification.TYPE_ERROR_MESSAGE);
+							String strErrorMessage = "Error retrieving data for Line-2.";
+							if (null != e.getExceptionMessage()){
+								strErrorMessage = e.getExceptionMessage();
+							}
+							_mainHomePage.getMainWindow().getWindow().showNotification(strErrorMessage, Notification.TYPE_ERROR_MESSAGE);
 							return;
 						}
 					}
@@ -442,7 +463,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 					}
 					Name names = null;
 					String gids="";
-					//System.out.println(",,,,,,,,,,,,,,,,,,,,  :"+nidList);
+					////System.out.println(",,,,,,,,,,,,,,,,,,,,  :"+nidList);
 					for(int n=0;n<listOfNids.size();n++){
 						names=manager.getGermplasmNameByID(Integer.parseInt(listOfNids.get(n).toString()));
 						gids=gids+names.getGermplasmId()+",";
@@ -455,7 +476,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 					
 					try {
 						//List<QtlDetailElement> listOfAllQtlDetailsCentral = qtlDetailsDAOCentral.getQtlDetailsByQTLIDs(QTLList, 0, 2);
-						System.out.println("%%%%%%%%%%%%%%%%%%%%%%%   :"+qtlDetailsDAOCentral.getQtlDetailsByQTLIDs(QTLList, 0, 2));
+						//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%   :"+qtlDetailsDAOCentral.getQtlDetailsByQTLIDs(QTLList, 0, 2));
 						
 						
 					} catch (MiddlewareQueryException e1) {
@@ -463,9 +484,9 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 						return;
 					}*/
 					
-					//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%   :"+genoManager.getQtlDetailsByQTLIDs(QTLList, 0, 12));
+					////System.out.println("%%%%%%%%%%%%%%%%%%%%%%%   :"+genoManager.getQtlDetailsByQTLIDs(QTLList, 0, 12));
 					gids = gids.substring(0,gids.length()-1);
-					//System.out.println("gids=:"+gids);
+					////System.out.println("gids=:"+gids);
 					String[] gidsO=gids.split(",");
 					int gid1=Integer.parseInt(gidsO[0]);
 					int gid2=Integer.parseInt(gidsO[1]);
@@ -535,7 +556,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 							for  (AllelicValueElement allelicValueElement : mappingAlleleValuesForPolymorphicMarkersRetrieval){
 								Integer datasetId = allelicValueElement.getDatasetId();
 								String alleleBinValue = allelicValueElement.getAlleleBinValue();
-								//System.out.println("allelicValueElement=:"+allelicValueElement);
+								////System.out.println("allelicValueElement=:"+allelicValueElement);
 								listOfDatasetIDs.add(datasetId);
 								if(! markersListforQ.contains(allelicValueElement.getMarkerName())){
 									markersListforQ.add(allelicValueElement.getMarkerName());
@@ -553,7 +574,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 								for  (AllelicValueElement allelicValueElement : mappingAlleleValuesForPolymorphicMarkersRetrieval){
 									Integer datasetId = allelicValueElement.getDatasetId();
 									String alleleBinValue = allelicValueElement.getAlleleBinValue();
-									//System.out.println("allelicValueElement=:"+allelicValueElement);
+									////System.out.println("allelicValueElement=:"+allelicValueElement);
 									listOfDatasetIDs.add(datasetId);
 									if(! markersListforQ.contains(allelicValueElement.getMarkerName())){
 										markersListforQ.add(allelicValueElement.getMarkerName());
@@ -569,7 +590,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 								for  (AllelicValueElement allelicValueElement : mappingAlleleValuesForPolymorphicMarkersRetrieval){
 									Integer datasetId = allelicValueElement.getDatasetId();
 									String alleleBinValue = allelicValueElement.getAlleleBinValue();
-									//System.out.println("allelicValueElement=:"+allelicValueElement);
+									////System.out.println("allelicValueElement=:"+allelicValueElement);
 									listOfDatasetIDs.add(datasetId);
 									if(! markersListforQ.contains(allelicValueElement.getMarkerName())){
 										markersListforQ.add(allelicValueElement.getMarkerName());
@@ -584,12 +605,12 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 					}
 					
 					
-					//System.out.println(".......:"+hashMap);
+					////System.out.println(".......:"+hashMap);
 					mList1=hashMap.get(gid1);
 					mList2=hashMap.get(gid2);
-					/*System.out.println("mList1=:"+mList1);
-					System.out.println("mList2=:"+mList2);*/
-					//System.out.println("copmmon Markers="+mFinalList);
+					/*//System.out.println("mList1=:"+mList1);
+					//System.out.println("mList2=:"+mList2);*/
+					////System.out.println("copmmon Markers="+mFinalList);
 					 int s=0;
 					
 					 if((hashMap.get(gid1).size())>(hashMap.get(gid2).size())){					
@@ -616,7 +637,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 					}
 					 geno1.clear();geno2.clear();mark1.clear(); mark2.clear();ch1.clear();ch2.clear();
 					 for(int c=0;c<listOfAlleleBinValue.size();c++){	
-						 ///System.out.println(".............:"+chVal.get(c));
+						 /////System.out.println(".............:"+chVal.get(c));
 						 String arr[]=new String[3];
 							StringTokenizer stz = new StringTokenizer(listOfAlleleBinValue.get(c).toString(), "!~!");
 				    		//arrList6 = new String[stz.countTokens()];
@@ -637,11 +658,11 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 						}			
 					}
 					
-					/*System.out.println("CH1:"+ch1);
-					System.out.println("CH2:"+ch2);
-					System.out.println("Mark1=:"+mark1);
-					System.out.println("Mark2=:"+mark2);
-					System.out.println("Geno1=:"+geno1);*/
+					/*//System.out.println("CH1:"+ch1);
+					//System.out.println("CH2:"+ch2);
+					//System.out.println("Mark1=:"+mark1);
+					//System.out.println("Mark2=:"+mark2);
+					//System.out.println("Geno1=:"+geno1);*/
 					missingList=new ArrayList();
 					listofMarkers = new ArrayList<String>();
 					//markersList= new ArrayList();
@@ -662,7 +683,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 							}
 						}
 					 
-						//System.out.println("listofMarkers:"+listofMarkers);
+						////System.out.println("listofMarkers:"+listofMarkers);
 					bDataRetrievedForNextTab = true;
 					
 				} catch (MiddlewareQueryException e) {
@@ -766,12 +787,12 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
                 	for (String string : hashSet) {
 						listOfMarkersSelected.add(string);
 					}
-                	//System.out.println(hashSet);
+                	////System.out.println(hashSet);
                 }
             }
         });
 		selectForMarkers.setImmediate(true);
-		//System.out.println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$   :"+listOfMarkersSelected);
+		////System.out.println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$   :"+listOfMarkersSelected);
 		
 		HorizontalLayout horizLytForSelectComponent = new HorizontalLayout();
 		horizLytForSelectComponent.setSizeFull();
@@ -786,12 +807,21 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 		selectMap.setValue(itemId);
 		selectMap.setNullSelectionAllowed(false);
 		selectMap.setImmediate(true);
-
+		try{
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+			
+			
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 		MapDAO mapDAOLocal = new MapDAO();
-		mapDAOLocal.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		mapDAOLocal.setSession(localSession);
 		
 		MapDAO mapDAOCentral = new MapDAO();
-		mapDAOCentral.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession());
+		mapDAOCentral.setSession(centralSession);
 
 		final ArrayList<Map> listOfAllMaps = new ArrayList<Map>();
 		List<Integer> markerIds=new ArrayList();
@@ -809,8 +839,8 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 						markerIds.add(markerIdsL.get(ml));
 					}
 				}
-				System.out.println("markerIds   ,,,,,,,,,,,,,,,,,,,,   :"+markerIds);
-				System.out.println("MAP WITH Marker count=:"+genoManager.getMapAndMarkerCountByMarkers(markerIds));
+				//System.out.println("markerIds   ,,,,,,,,,,,,,,,,,,,,   :"+markerIds);
+				//System.out.println("MAP WITH Marker count=:"+genoManager.getMapAndMarkerCountByMarkers(markerIds));
 				List<MapDetailElement> details = genoManager.getMapAndMarkerCountByMarkers(markerIds));
 		        if (details != null && details.size() > 0) {
 		            //Debug.println(0, "FOUND " + details.size() + " records");
@@ -897,10 +927,10 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 					_mainHomePage.getMainWindow().getWindow().showNotification("Please select a valid Map to display the markers.", Notification.TYPE_ERROR_MESSAGE);
 					return;
 				}
-				//System.out.println("listOfMarkersSelected=:"+listOfMarkersSelected);
+				////System.out.println("listOfMarkersSelected=:"+listOfMarkersSelected);
 				if (null != listOfMarkersSelected){
 					retrieveMappingDataBetweenLines();
-					//System.out.println("@@@@@@@@@@@@@@@  finalListOfMappingData:"+finalListOfMappingData);
+					////System.out.println("@@@@@@@@@@@@@@@  finalListOfMappingData:"+finalListOfMappingData);
 				}
 
 				if (null != finalListOfMappingData){
@@ -930,7 +960,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 		
 		//20131206: Tulasi --- Added a new button for KBio order form
 		//Button btnViewKBioOrderForm = new Button("View KBio Order Form");
-		Button btnViewKBioOrderForm = new Button("Create KBio Order Form");
+		Button btnViewKBioOrderForm = new Button("Create LGC Genomics Order Form");
 		btnViewKBioOrderForm.addListener(new Button.ClickListener() {
 			private static final long serialVersionUID = 1L;
 			@Override
@@ -948,9 +978,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 								markersForKBio.add(listOfMarkersSelected.get(m));
 							}
 						}
-
 						if(!(markersForKBio.isEmpty())){
-
 							orderFormForPlymorphicMarkers=exportFileFormats.exportToKBio(markersForKBio, _mainHomePage);
 							FileResource fileResource = new FileResource(orderFormForPlymorphicMarkers, _mainHomePage);
 							//_mainHomePage.getMainWindow().getWindow().open(fileResource, "", true);
@@ -973,9 +1001,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 			}
 		});
 		
-
 		/*Link gtpExcelFileLink = new Link("Download KBio Order Form", new ExternalResource(""));
-
 		 if (null != orderFormForPlymorphicMarkers){
 			gtpExcelFileLink = new Link("Download KBio Order Form", new FileDownloadResource(
 					orderFormForPlymorphicMarkers, _mainHomePage.getMainWindow().getWindow().getApplication()));
@@ -1060,7 +1086,6 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 		_tableForMarkerResults.addContainerProperty("Trait", String.class, null);
 	
 		ArrayList<MappingData> arrayListOfSortedData = sortFinalListOfMappingData();
-		//ArrayList<MappingData> arrayListOfSortedData = sortFinalListOfMappingData();
 		
 		if (null != finalListOfMappingData){
 			_tableForMarkerResults.setEnabled(true);
@@ -1141,7 +1166,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 			private static final long serialVersionUID = 1L;
 			public void valueChange(ValueChangeEvent event) {
 				Object value = event.getProperty().getValue();
-				//System.out.println("Value Change listener: " + value);
+				////System.out.println("Value Change listener: " + value);
 				String strValue = value.toString(); 
 				if (0 == Integer.parseInt(strValue)){
 					uncheckAllCheckBox(checkBox, selectTrait, htTraitList);
@@ -1165,7 +1190,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 			private static final long serialVersionUID = 1L;
 			public void layoutClick(LayoutClickEvent event) {
 		        if (event.getChildComponent() == txtBinSize) {
-		            //System.out.println("clicked the TextField");
+		            ////System.out.println("clicked the TextField");
 		            String strValue = txtBinSize.getValue().toString(); 
 					if (0 == Integer.parseInt(strValue)){
 						uncheckAllCheckBox(checkBox, selectTrait, htTraitList);
@@ -1216,7 +1241,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 			}
 		});
 		
-		Button btnViewKBioOrderForm = new Button("Create KBio Order Form");
+		Button btnViewKBioOrderForm = new Button("Create LGC Genomics Order Form");
 		btnViewKBioOrderForm.addListener(new Button.ClickListener() {
 			private static final long serialVersionUID = 1L;
 			@Override
@@ -1226,12 +1251,42 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 				String mType="SNP";
 				ExportFileFormats exportFileFormats = new ExportFileFormats();
 				ArrayList <String> markersForKBio=new ArrayList();		
+				if(null == finalListOfMappingData || 0 == finalListOfMappingData.size()) {
+					return;
+				}
+				List<String[]> listToExport = new ArrayList<String[]>();
+				listOfMarkers=new ArrayList();
+				for (int i = 0; i < finalListOfMappingData.size(); i++){
+
+					MappingData mappingData = finalListOfMappingData.get(i);	
+					if (false == (Boolean) arrayOfCheckBoxes[i].getValue()) {
+						continue;
+					}
+					String markerName = mappingData.getMarkerName();					
+					
+					//arrayOfCheckBoxes[i] = new CheckBox();
+					listToExport.add(new String[] {markerName});
+				}
+				//System.out.println("listToExport=:"+listToExport);
+				for (int i = 0; i < listToExport.size(); i++){
+					String[] strings = listToExport.get(i);
+					////System.out.println("........................:"+strings);
+					for (int j = 0; j < strings.length; j++) {
+						if(null != strings[j]) {
+							//Label lGID = new Label(j, i,  "");
+							//sheet.addCell(lGID);
+							////System.out.println("........................:"+strings[j]);
+							listOfMarkers.add(strings[j].toString());
+							continue;
+						} 
+					}
+				}
 				try {
 					List<String> snpMarkers=genoManager.getMarkerNamesByMarkerType(mType, 0, (int)genoManager.countMarkerNamesByMarkerType(mType));
 					if(!(snpMarkers.isEmpty())){
-						for(int m=0; m<listOfMarkersSelected.size();m++){
-							if(snpMarkers.contains(listOfMarkersSelected.get(m))){
-								markersForKBio.add(listOfMarkersSelected.get(m));
+						for(int m=0; m<listOfMarkers.size();m++){
+							if(snpMarkers.contains(listOfMarkers.get(m))){
+								markersForKBio.add(listOfMarkers.get(m).toString());
 							}
 						}
 						if(!(markersForKBio.isEmpty())) {
@@ -1276,10 +1331,10 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 		//20131206: Added a new button to export the data in KBio format 
 		//TODO: Have to add the required icon
 		//themeResource = new ThemeResource("images/pdf.gif");
-		Button kbioButton = new Button();
+		/*Button kbioButton = new Button();
 		kbioButton.setIcon(themeResource);
 		kbioButton.setStyleName(Reindeer.BUTTON_LINK);
-		kbioButton.setDescription("KBio Format");
+		kbioButton.setDescription("LGC Genomics Order form");
 		//layoutForExportTypes.addComponent(kbioButton);
 		kbioButton.addListener(new Button.ClickListener() {
 			private static final long serialVersionUID = 1L;
@@ -1317,11 +1372,9 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 						}
 						if(!(markersForKBio.isEmpty())) {
 							orderFormForPlymorphicMarkers=exportFileFormats.exportToKBio(markersForKBio, _mainHomePage);
-
 							FileResource fileResource = new FileResource(orderFormForPlymorphicMarkers, _mainHomePage);
 							_mainHomePage.getMainWindow().getWindow().open(fileResource, "", true);
 						}else{
-
 							_mainHomePage.getMainWindow().getWindow().showNotification("Selected Marker(s) are not SNPs", Notification.TYPE_ERROR_MESSAGE);
 							return;
 						}
@@ -1335,7 +1388,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 					return;
 				}
 			}
-		});
+		});*/
 		//20131206: Added a new button to export the data in KBio format 
 		
 		//20131210: Tulasi --- Not displaying the PDF and Print buttons
@@ -1442,8 +1495,6 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 		
 		return null;
 	}
-	
-
 	private void handleChecks(TextField txtBinSize, CheckBox checkBox,
 			ComboBox selectTrait, Hashtable<String, String> htTraitList) {
 		Object value = txtBinSize.getValue();
@@ -1592,8 +1643,14 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 			String markerName = mappingData.getMarkerName();
 			float startPosition = mappingData.getStartPosition();
 			String strQtlTrait = hmOfMarkerIDAndQtlTrait.get(markerId);
-			arrayOfCheckBoxes[i] = new CheckBox();
-			listToExport.add(new String[] {markerName, strMapName, strLinkageGroup, String.valueOf(startPosition), strQtlTrait});
+			//arrayOfCheckBoxes[i] = new CheckBox();
+			if (null != arrayOfCheckBoxes) {
+				if (null != arrayOfCheckBoxes[i]){
+					if (true == arrayOfCheckBoxes[i].booleanValue()) {
+						listToExport.add(new String[] {markerName, strMapName, strLinkageGroup, String.valueOf(startPosition), strQtlTrait});
+					}
+				}
+			}
 		}
 		
 		if(0 == listToExport.size()) {
@@ -1617,18 +1674,27 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 
 
 	private void retrieveMappingDataBetweenLines() {
-		
+		try{
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+			
+			
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 		
 		
 		MarkerDAO markerDAOLocal = new MarkerDAO();
-		markerDAOLocal.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		markerDAOLocal.setSession(localSession);
 		MarkerDAO markerDAOCentral = new MarkerDAO();
-		markerDAOCentral.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession());
+		markerDAOCentral.setSession(centralSession);
 
 		MarkerOnMapDAO markerOnMapDAOLocal = new MarkerOnMapDAO();
-		markerOnMapDAOLocal.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		markerOnMapDAOLocal.setSession(localSession);
 		MarkerOnMapDAO markerOnMapDAOCentral = new MarkerOnMapDAO();
-		markerOnMapDAOCentral.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession());
+		markerOnMapDAOCentral.setSession(centralSession);
 
 		ArrayList<Integer> listOfAllMarkerIDs = new ArrayList<Integer>();
 		ArrayList<MarkerOnMap> listOfAllMarkerOnMaps = new ArrayList<MarkerOnMap>();
@@ -1654,31 +1720,31 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 					}
 				}
 			}
-			System.out.println("listOfAllMarkerIDs..............:"+listOfAllMarkerIDs);
+			//System.out.println("listOfAllMarkerIDs..............:"+listOfAllMarkerIDs);
 			/*List<MapInfo> results=null ;
 			
 
 			List<MapInfo> resultsC = genoManager.getMapInfoByMapName(strSelectedMapName, Database.CENTRAL);
 			List<MapInfo> ResultsL= genoManager.getMapInfoByMapName(strSelectedMapName, Database.LOCAL);
 			if(!(resultsC.isEmpty())){
-				System.out.println("IF C not Null");
+				//System.out.println("IF C not Null");
 				// results=genoManager.getMapInfoByMapName(strSelectedMapName, Database.LOCAL);
 	        //Debug.println(0, "testGetMapInfoByMapName(mapName=" + mapName + ") RESULTS size: " + results.size());
 		        for (MapInfo mapInfoC : resultsC){
-		            System.out.println("^^^^^^^^^^^^^^  :"+mapInfoC);
+		            //System.out.println("^^^^^^^^^^^^^^  :"+mapInfoC);
 		            results.add(mapInfoC);
 		        }
 			}
 			
 			if(!(ResultsL.isEmpty())){
-				System.out.println("IF L not null");
+				//System.out.println("IF L not null");
 				for (MapInfo mapInfoL : ResultsL){
-		            System.out.println("^^^^^^^^^^^^^^  :"+mapInfoL);
+		            //System.out.println("^^^^^^^^^^^^^^  :"+mapInfoL);
 		            results.add(mapInfoL);
 		        }
 			}
 			for (MapInfo mapInfo : results){
-	            System.out.println("^^^^^^^^^^^^^^  :"+mapInfo);
+	            //System.out.println("^^^^^^^^^^^^^^  :"+mapInfo);
 	            
 	        }*/
 			
@@ -1725,13 +1791,13 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 				}
 			}
 		}
-		System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%   &&&&&&&&&&&&&&&&&&   %%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+		//System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%   &&&&&&&&&&&&&&&&&&   %%%%%%%%%%%%%%%%%%%%%%%%%%%%");
 		//genoManager
 
 		MappingDataDAO mappingDataDAOLocal = new MappingDataDAO();
-		mappingDataDAOLocal.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		mappingDataDAOLocal.setSession(localSession);
 		MappingDataDAO mappingDataDAOCentral = new MappingDataDAO();
-		mappingDataDAOCentral.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession());
+		mappingDataDAOCentral.setSession(centralSession);
 		ArrayList<MappingData> listOfAllMappingData = new ArrayList<MappingData>();
 		ArrayList<MappingData> finalListOfMappingDataForSelectedMap = new ArrayList<MappingData>();
 		try {
@@ -1740,7 +1806,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 			List<MappingData> listOfAllMappingDataCentral = mappingDataDAOCentral.getAll();
 			
 			if (null != listOfAllMappingDataCentral){
-				//System.out.println("listOfAllMappingDataCentral=:"+listOfAllMappingDataCentral);
+				////System.out.println("listOfAllMappingDataCentral=:"+listOfAllMappingDataCentral);
 				for (MappingData mappingData : listOfAllMappingDataCentral){
 					//if (iSelectedMapId.equals(mappingData.getMapId())) {
 					if (false == listOfAllMappingData.contains(mappingData)){
@@ -1750,7 +1816,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 				}
 			}
 			if (null != listOfAllMappingDataLocal) {
-				//System.out.println("listOfAllMappingDataLocal:"+listOfAllMappingDataLocal);
+				////System.out.println("listOfAllMappingDataLocal:"+listOfAllMappingDataLocal);
 				for (MappingData mappingData : listOfAllMappingDataLocal){
 					//if (iSelectedMapId.equals(mappingData.getMapId())) {
 					if (false == listOfAllMappingData.contains(mappingData)){
@@ -1760,17 +1826,17 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 					//}
 				}
 			}
-			//System.out.println("iSelectedMapId=:"+iSelectedMapId+"   listOfAllMappingData=:"+listOfAllMappingData);
+			////System.out.println("iSelectedMapId=:"+iSelectedMapId+"   listOfAllMappingData=:"+listOfAllMappingData);
 			for (MappingData mappingData : listOfAllMappingData){
-				//System.out.println(iSelectedMapId+"=="+ mappingData.getMapId());
+				////System.out.println(iSelectedMapId+"=="+ mappingData.getMapId());
 				if (iSelectedMapId == Integer.parseInt(mappingData.getMapId().toString())){
-					//System.out.println("######################");
+					////System.out.println("######################");
 					finalListOfMappingDataForSelectedMap.add(mappingData);
 					
 				}
 				
 			}
-			//System.out.println("*********************:"+finalListOfMappingDataForSelectedMap);
+			////System.out.println("*********************:"+finalListOfMappingDataForSelectedMap);
 			//genoManager.getMap
 			/*List<MapInfo> results = genoManager.getMapInfoByMapName(mapName, Database.CENTRAL);
 	        Debug.println(0, "testGetMapInfoByMapName(mapName=" + mapName + ") RESULTS size: " + results.size());
@@ -1780,7 +1846,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 	        }*/
 			
 			
-			//System.out.println("finalListOfMappingDataForSelectedMap:"+finalListOfMappingDataForSelectedMap);
+			////System.out.println("finalListOfMappingDataForSelectedMap:"+finalListOfMappingDataForSelectedMap);
 			
 		} catch (MiddlewareQueryException e1) {
 			_mainHomePage.getMainWindow().getWindow().showNotification("Error Retrieving Mapping Data objects", Notification.TYPE_ERROR_MESSAGE);
@@ -1795,7 +1861,7 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 		
 		for (MarkerOnMap markerOnMap : finalListOfMarkersOnMap){
 			Integer markerIdOnMap = markerOnMap.getMarkerId();
-			//System.out.println("markerIdOnMap=:"+markerIdOnMap);
+			////System.out.println("markerIdOnMap=:"+markerIdOnMap);
 			for (MappingData mappingData : finalListOfMappingDataForSelectedMap){
 				if (markerIdOnMap.equals(mappingData.getMarkerId())){
 					//if (iSelectedMapId.equals(mappingData.getMapId())) {
@@ -1807,13 +1873,13 @@ public class RetrievePolymorphicMarkerComponent implements Component.Listener {
 				}
 			}
 		}
-		//System.out.println("finalListOfMappingData=:"+finalListOfMappingData);
+		////System.out.println("finalListOfMappingData=:"+finalListOfMappingData);
 		/*Integer markerId, String linkageGroup, Float startPosition, 
         String mapUnit, String mapName, String markerName, Integer mapId*/
 		QtlDetailsDAO qtlDetailsDAOLocal = new QtlDetailsDAO();
-		qtlDetailsDAOLocal.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		qtlDetailsDAOLocal.setSession(localSession);
 		QtlDetailsDAO qtlDetailsDAOCentral = new QtlDetailsDAO();
-		qtlDetailsDAOCentral.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession());
+		qtlDetailsDAOCentral.setSession(centralSession);
 		ArrayList<QtlDetails> listOfAllQtlDetails = new ArrayList<QtlDetails>();
 		try {
 			List<QtlDetails> listOfAllQtlDetailsLocal = qtlDetailsDAOLocal.getAll();

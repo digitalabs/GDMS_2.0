@@ -27,11 +27,21 @@ public class RetrieveQTL {
 	OntologyDataManager om;
 	
 	public RetrieveQTL() {
-		localSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
+		try{
+			//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			om=factory.getOntologyDataManager();
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+		/*localSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
 		centralSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
 		
 		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
-		om=factory.getOntologyDataManager();
+		om=factory.getOntologyDataManager();*/
 		
 	}
 	

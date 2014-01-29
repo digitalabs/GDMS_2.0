@@ -2,15 +2,28 @@
 <web-app id="WebApp_ID" version="2.4" xmlns="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
 	<display-name>GDMS</display-name>
 	<context-param>
+		<description>Vaadin production mode</description>
+		<param-name>productionMode</param-name>
+		<param-value>false</param-value>
+	</context-param>
+	<context-param>
   		<param-name>middleware_database_property_file</param-name>
   		<param-value>DatabaseConfig.properties</param-value>
+  		
  	</context-param>
- 	<!-- <listener>
-  		<listener-class>org.generationcp.middleware.support.servlet.MiddlewareServletContextListener</listener-class>
- 	</listener>
+ 	<context-param>
+ 		<param-name>workbench_database_property_file</param-name>
+        <param-value>DatabaseConfig.properties</param-value>
+        </context-param>
  	<listener>
- 		 <listener-class>org.generationcp.middleware.support.servlet.MiddlewareServletRequestListener</listener-class>
- 	</listener> -->
+        <!-- <listener-class>org.generationcp.middleware.support.servlet.MiddlewareServletRequestListener</listener-class> -->
+		<listener-class>org.icrisat.gdms.ui.GDMSServletRequestListener</listener-class>
+    </listener>  
+	<listener>
+		<!-- <listener-class>org.generationcp.middleware.support.servlet.MiddlewareServletContextListener</listener-class> -->
+		<listener-class>org.icrisat.gdms.ui.GDMSServletContextListener</listener-class>
+    </listener>
+    
 	
 	<servlet>
 		<servlet-name>Gdms Application</servlet-name>
@@ -21,6 +34,9 @@
 			<param-value>org.icrisat.gdms.ui.GDMSMain</param-value>
 		</init-param>		
 	</servlet>	
+	<session-config>
+  		<session-timeout>-1</session-timeout>
+ 	</session-config>
 	<servlet-mapping>
 		<servlet-name>Gdms Application</servlet-name>
 		<url-pattern>/*</url-pattern>

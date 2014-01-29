@@ -117,7 +117,8 @@ public class UploadComponent extends CustomComponent implements ItemClickListene
 		final Object[][] uploadTemplates = new Object[][]{
 				new Object[]{"Marker Information", "SSR Marker", "SNP Marker", "CISR Marker", "CAP Marker"}, 
 				new Object[]{"Genotyping Data", "SSR Genotype", "SNP Genotype", "DArt Genotype", "Mapping"},
-				new Object[]{"Maps/QTLs", "Map", "QTL", "MTA"}
+				//new Object[]{"Maps/QTLs", "Map", "QTL", "MTA"}
+				new Object[]{"Maps/QTLs", "Map", "QTL"}
 		};
 
 		_hierarchicalContainer = new HierarchicalContainer();
@@ -157,13 +158,13 @@ public class UploadComponent extends CustomComponent implements ItemClickListene
 					} else if (childNode.equals("SNP Genotype")){ 
 						_treeForGDMSUpload.setChildrenAllowed(childNode, true);
 
-						_treeForGDMSUpload.addItem("KBio Science SNP");
+						_treeForGDMSUpload.addItem("LGC Genomics SNP");
 						_treeForGDMSUpload.addItem("Generic SNP");
 
-						_treeForGDMSUpload.setParent("KBio Science SNP", childNode);
+						_treeForGDMSUpload.setParent("LGC Genomics SNP", childNode);
 						_treeForGDMSUpload.setParent("Generic SNP", childNode);
 						
-						_treeForGDMSUpload.setChildrenAllowed("KBio Science SNP", false);
+						_treeForGDMSUpload.setChildrenAllowed("LGC Genomics SNP", false);
 						_treeForGDMSUpload.setChildrenAllowed("Generic SNP", false);
 
 						//20131206: Tulasi : Modified the tree to display separate nodes for Generic and KBio SNPs
@@ -254,7 +255,7 @@ public class UploadComponent extends CustomComponent implements ItemClickListene
 						_strItemSelected = _strItemSelected + " Sample Template";
 					//}
 				}
-
+				
 			} else {
 				strSelectedNode = "SSR Marker"; 
 			}

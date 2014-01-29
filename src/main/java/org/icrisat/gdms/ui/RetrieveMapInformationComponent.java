@@ -4,6 +4,8 @@ package org.icrisat.gdms.ui;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Hashtable;
@@ -15,6 +17,7 @@ import jxl.write.WriteException;
 
 import org.generationcp.middleware.dao.gdms.QtlDetailsDAO;
 import org.generationcp.middleware.exceptions.MiddlewareQueryException;
+import org.generationcp.middleware.manager.Database;
 import org.generationcp.middleware.manager.ManagerFactory;
 import org.generationcp.middleware.manager.api.GenotypicDataManager;
 import org.generationcp.middleware.manager.api.OntologyDataManager;
@@ -24,6 +27,8 @@ import org.generationcp.middleware.pojos.gdms.MappingData;
 import org.generationcp.middleware.pojos.gdms.MarkerInfo;
 import org.generationcp.middleware.pojos.gdms.QtlDetails;
 import org.generationcp.middleware.pojos.gdms.QtlDetailsPK;
+import org.generationcp.middleware.util.Debug;
+import org.hibernate.Session;
 import org.icrisat.gdms.common.ExportFileFormats;
 import org.icrisat.gdms.common.GDMSException;
 import org.icrisat.gdms.retrieve.RetrieveMap;
@@ -35,6 +40,7 @@ import com.vaadin.data.Property.ValueChangeEvent;
 import com.vaadin.data.validator.RegexpValidator;
 import com.vaadin.event.LayoutEvents.LayoutClickEvent;
 import com.vaadin.event.LayoutEvents.LayoutClickListener;
+import com.vaadin.terminal.FileResource;
 import com.vaadin.terminal.ThemeResource;
 import com.vaadin.ui.AbstractTextField.TextChangeEventMode;
 import com.vaadin.ui.Alignment;
@@ -63,6 +69,9 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 	private GDMSMain _mainHomePage;
 	protected List<MappingData> listOfAllMappingData;
 	
+	private Session localSession;
+	private Session centralSession;
+	
 	protected List<MapInfo> listOfAllMapData;
 	//private CheckBox[] arrayOfCheckBoxes;
 	private Component buildMapComponent;
@@ -84,13 +93,18 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 	String strSelectedMap="";
 	public RetrieveMapInformationComponent(GDMSMain theMainHomePage){
 		_mainHomePage = theMainHomePage;
-		/*try{*/
-			factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+		try{
+			//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
 			om=factory.getOntologyDataManager();
 			genoManager=factory.getGenotypicDataManager();
-		/*} catch (MiddlewareQueryException e) {
-			throw new GDMSException(e.getMessage());
-		}*/
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -129,7 +143,7 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 		return horizontalLayout;
 	}
 
-	
+
 	private Component buildMapSearchComponent() {
 		VerticalLayout searchMAPsLayout = new VerticalLayout();
 		searchMAPsLayout.setCaption("Search");
@@ -229,7 +243,7 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 				
 				strMapName = txtFieldSearch.getValue().toString();
 				List<String> listOfNames = new ArrayList<String>();
-				
+								
 				if (null == tableWithAllMaps){
 					return;
 				}
@@ -477,7 +491,7 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 
 	private void retrieveMapDetails(String strMapName) {
 		
-		//System.out.println("^^^^^^^^^^^^^^^   :"+strMapName);
+		System.out.println("^^^^^^^^^^^^^^^   :"+strMapName);
 		if (null != strMapName && (false == strMapName.equals(""))){
 			RetrieveMap retrieveMap = new RetrieveMap();
 			try {
@@ -492,7 +506,7 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 					 listOfAllMapData.add(mapInfo);
 				 }
 				// strMapName=strMapName;
-				//System.out.println("listOfAllMapData:"+listOfAllMapData);
+				System.out.println("listOfAllMapData:"+listOfAllMapData);
 				
 				
 				//System.out.println("listOfAllMappingData=:"+listOfAllMappingData);
@@ -503,6 +517,7 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 		}
 	}
 
+	
 
 	private Component buildMapResultsComponent() {
 		VerticalLayout resultsLayout = new VerticalLayout();
@@ -563,11 +578,11 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 				
 				if (null != listOfAllMapData){
 					ExportFileFormats exportFileFormats = new ExportFileFormats();
-					//try {
+					try {
 						
 						File baseDirectory = _mainHomePage.getMainWindow().getApplication().getContext().getBaseDirectory();
 						File absoluteFile = baseDirectory.getAbsoluteFile();
-						//System.out.println(absoluteFile);
+						System.out.println(absoluteFile);
 						
 						File[] listFiles = absoluteFile.listFiles();
 						File fileExport = baseDirectory;
@@ -584,17 +599,17 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 						long time = new Date().getTime();
 						strAbsolutePath = strAbsolutePath + "\\" + "CMTV" + time + ".txt";
 						
-						/*ArrayList<String[]> sortMapListToBeDisplayed = sortMappingDataListToBeDisplayed(listOfAllMappingData);
+						ArrayList<String[]> sortMapListToBeDisplayed = sortMappingDataListToBeDisplayed(listOfAllMapData);
 						
-						System.out.println(sortMapListToBeDisplayed.size());
+						//System.out.println(sortMapListToBeDisplayed.size());
 						
-						exportFileFormats.CMTVTxt(sortMapListToBeDisplayed, strAbsolutePath, _mainHomePage);*/
+						exportFileFormats.CMTVTxt(sortMapListToBeDisplayed, strAbsolutePath, _mainHomePage);
 
 						
-					/*} catch (GDMSException e) {
+					} catch (GDMSException e) {
 						_mainHomePage.getMainWindow().getWindow().showNotification("Error displaying Map Details in a text file", Notification.TYPE_ERROR_MESSAGE);
 						return;
-					}*/
+					}
 				} else {	
 					_mainHomePage.getMainWindow().getWindow().showNotification("No Map Details to be diplayed in the CMTV text file", Notification.TYPE_ERROR_MESSAGE);
 					return;
@@ -632,7 +647,7 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 						System.out.println(">>>>>" + strAbsolutePath);
 						ArrayList markerList =new ArrayList();
 						long time = new Date().getTime();
-						strAbsolutePath = strAbsolutePath + "\\" + "CMTV" + time + ".txt";
+						//strAbsolutePath = strAbsolutePath + "\\" + "CMTV" + time + ".txt";
 						
 						ArrayList<String[]> sortMapListToBeDisplayed = sortMappingDataListToBeDisplayed(listOfAllMappingData);
 						
@@ -691,11 +706,15 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 				List<String[]> listOfData = new ArrayList<String[]>();
 				if (null != listOfAllMapData){
 					
+					
+					
+					
+					
 					for (int i = 0; i < listOfAllMapData.size(); i++){
 						
 						MapInfo mapDetailElement = listOfAllMapData.get(i);
 					
-						//final String strMapName = mapDetailElement.getMapName();
+						//strMapName = strMapName;
 						final String strLinkageGroup = mapDetailElement.getLinkageGroup();
 						String strMapUnit = mapDetailElement.getMapUnit();
 						String strMarkerName = mapDetailElement.getMarkerName();
@@ -813,7 +832,9 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 							String traitFromLocal;
 							try {
 								//traitFromLocal = traitDAOLocal.getByTraitId(iTraitId);
+								
 								traitFromLocal=om.getStandardVariable(iTraitId).getName();
+								System.out.println(traitFromLocal);
 								/*
 								if (null != traitFromLocal){
 									strQtlTrait = traitFromLocal.getAbbreviation();
@@ -870,7 +891,7 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 			private static final long serialVersionUID = 1L;
 			public void valueChange(ValueChangeEvent event) {
 				Object value = event.getProperty().getValue();
-				//System.out.println("Value Change listener: " + value);
+				System.out.println("Value Change listener: " + value);
 				String strValue = value.toString(); 
 				if (0 == strValue.length()){
 					uncheckAllCheckBox(checkBox, selectTrait, htTraitList);
@@ -896,7 +917,7 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 			public void layoutClick(LayoutClickEvent event) {
 		        if (event.getChildComponent() == txtBinSize) {
 		            String strValue = txtBinSize.getValue().toString(); 
-		            //System.out.println("clicked the TextField: " + strValue);
+		            System.out.println("clicked the TextField: " + strValue);
 					if (0 == strValue.length()){
 						uncheckAllCheckBox(checkBox, selectTrait, htTraitList);
 						return;
@@ -1143,7 +1164,7 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 
 			public void buttonClick(ClickEvent event) {
 				
-				if (null != listOfAllMappingData){
+				if (null != listOfAllMapData){
 					
 					//20131108: Tulasi: Creating another table object with selected rows to be exported
 					Table tableForSelectedMarkers = new Table();
@@ -1225,11 +1246,12 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 		
 		//20131206: Added a new button to export the data in KBio format 
 		//TODO: Have to add the required icon
-		themeResource = new ThemeResource("images/LGC_Genomics.gif");
+		
+		ThemeResource themeResource1 = new ThemeResource("images/LGC_Genomics.gif");
 		Button kbioButton = new Button();
-		kbioButton.setIcon(themeResource);
+		kbioButton.setIcon(themeResource1);
 		kbioButton.setStyleName(Reindeer.BUTTON_LINK);
-		kbioButton.setDescription("KBio Format");
+		kbioButton.setDescription("LGC Genomics Order form");
 		layoutForExportTypes.addComponent(kbioButton);
 		kbioButton.addListener(new Button.ClickListener() {
 			private static final long serialVersionUID = 1L;
@@ -1238,8 +1260,8 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 				
 				try{
 					ExportFileFormats exportFileFormats = new ExportFileFormats();
-					exportFileFormats.exportToKBio(snpMarkerList, _mainHomePage);
-					
+					//exportFileFormats.exportToKBio(snpMarkerList, _mainHomePage);
+					String mType="SNP";
 					ArrayList markerList=new ArrayList();
 					//ArrayList<String[]> sortMapListToBeDisplayed = sortMappingDataListToBeDisplayed(listOfAllMapData);
 					
@@ -1249,22 +1271,25 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 						String strMarkerName = listOfAllMapData.get(i).getMarkerName();
 						markerList.add(strMarkerName);
 					}
+					snpMarkerList=new ArrayList();
+					List<String> results =genoManager.getMarkerNamesByMarkerType(mType, 0, (int)genoManager.countMarkerNamesByMarkerType(mType));
 					for(int m=0;m<markerList.size();m++){
-						long count = genoManager.countMarkerInfoByMarkerName(markerList.get(m).toString());
-				        //System.out.println("countMarkerInfoByMarkerName(" + markerList.get(m).toString() + ")  RESULTS: " + count);
-				        List<MarkerInfo> results = genoManager.getMarkerInfoByMarkerName(markerList.get(m).toString(), 0, (int) count);
-				        for (MarkerInfo res : results) {
-				        	String markerType=res.getMarkerType();
-				        	if(markerType.equalsIgnoreCase("snp"))
-							snpMarkerList.add(res.getMarkerName());
+						
+						if(results.contains(markerList.get(m).toString())){
+							snpMarkerList.add(markerList.get(m).toString());
 						}
-				        
 						//genoManager.getMarkerInfoByMarkerName(arg0, arg1, arg2);
 					}
 					//System.out.println("snpMarkerList" + snpMarkerList);
-					if(snpMarkerList.size()>0)
-						exportFileFormats.exportToKBio(snpMarkerList,  _mainHomePage);
-					else{
+					if(snpMarkerList.size()>0){
+						File kbioOrderFormFile = exportFileFormats.exportToKBio(snpMarkerList, _mainHomePage);
+						FileResource fileResource = new FileResource(kbioOrderFormFile, _mainHomePage);
+						//_mainHomePage.getMainWindow().getWindow().open(fileResource, "KBio Order Form", true);
+						_mainHomePage.getMainWindow().getWindow().open(fileResource, "_self");
+						
+						
+						//exportFileFormats.exportToKBio(snpMarkerList,  _mainHomePage);
+					}else{
 						_mainHomePage.getMainWindow().getWindow().showNotification("No SNP Marker(s) to create KBio Order form", Notification.TYPE_ERROR_MESSAGE);
 						return;
 					}
@@ -1276,22 +1301,6 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 				
 			}
 		});
-		//20131206: Added a new button to export the data in KBio format 
-
-
-		//20131210: Tulasi --- Not displaying the PDF and Print buttons
-		/*themeResource = new ThemeResource("images/print.gif");
-		Button printButton = new Button();
-		printButton.setIcon(themeResource);
-		printButton.setStyleName(Reindeer.BUTTON_LINK);
-		printButton.setDescription("Print Format");
-		layoutForExportTypes.addComponent(printButton);
-		printButton.addListener(new Button.ClickListener() {
-			private static final long serialVersionUID = 1L;
-
-			public void buttonClick(ClickEvent event) {
-			}
-		});*/
 		
 		
 		if (0 == _tableForMarkerResults.size()){
@@ -1513,6 +1522,7 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 					handleCheckBox(checkBox, selectTrait, 0, htTraitList);
 				}
 				arrayOfCheckBoxesForMap[i+1].setValue(true);
+				
 			} else {
 				if(checkBox.booleanValue()) {
 					handleCheckBox(checkBox, selectTrait, i + 1, htTraitList);
@@ -1683,7 +1693,11 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 
 	private List<QtlDetails> getCentralQTLDetails() throws MiddlewareQueryException {
 		QtlDetailsDAO qtlDetailsDAO = new QtlDetailsDAO();
-		qtlDetailsDAO.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession());
+		try{
+			qtlDetailsDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession());
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 		List<QtlDetails> allQTLDetails = qtlDetailsDAO.getAll();
 		return allQTLDetails;
 	}
@@ -1691,17 +1705,121 @@ public class RetrieveMapInformationComponent  implements Component.Listener {
 	private List<QtlDetails> getLocalQTLDetails()
 			throws MiddlewareQueryException {
 		QtlDetailsDAO qtlDetailsDAO = new QtlDetailsDAO();
-		qtlDetailsDAO.setSession(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession());
+		try{
+			qtlDetailsDAO.setSession(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession());
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 		List<QtlDetails> allQTLDetails = qtlDetailsDAO.getAll();
 		return allQTLDetails;
 	}
 	
+	private ArrayList<String[]> sortMappingDataListToBeDisplayed(List<MapInfo> theListOfAllMappingData) {
+		SortingMaps sortingMaps = new SortingMaps();
+		List<MapInfo> sortedList = sortingMaps.sort(theListOfAllMappingData);
+		
+		DecimalFormat decfor = new DecimalFormat("#.00");
+		ArrayList<String> CD=new ArrayList<String>();
+		String mapUnit = "CM";//default
+		for (MapInfo mappingData : sortedList) {
+			mapUnit = mappingData.getMapUnit();
+			if(mapUnit.equalsIgnoreCase("bp")){
+				CD.add(mappingData.getLinkageGroup()+"!~!"+new BigDecimal(mappingData.getStartPosition())+"!~!"+mappingData.getMarkerName()+"!~!"+mappingData.getMapName());
+			}else{
+				CD.add(mappingData.getLinkageGroup()+"!~!"+decfor.format(mappingData.getStartPosition())+"!~!"+mappingData.getMarkerName()+"!~!"+mappingData.getMapName());
+			}
+		}
 	
-	
+		ArrayList<String[]> dist=new ArrayList<String[]>();
+		String[] strArr=CD.get(0).toString().split("!~!");
+		double dis=Double.parseDouble(strArr[1]);
+		String chr=strArr[0];
+		int count=0;
+		int dis1=0;
+		for(int a=0;a<CD.size();a++){
+			String[] str1=CD.get(a).toString().split("!~!");						
+			if(str1[0].equals(chr)){							
+				double distance=Double.parseDouble(str1[1])-dis;
+				distance=roundThree(distance);
+				if(mapUnit.equalsIgnoreCase("bp")){
+					String[] strValues = new String[5];
+					strValues[0] = str1[0];
+					strValues[1] = str1[2];
+					strValues[2] = String.valueOf(count);
+					strValues[3] = String.valueOf(new BigDecimal(distance));
+					strValues[4] = str1[1];
+					//dist.add(str1[0]+"!~!"+str1[2]+"!~!"+count+"!~!"+new BigDecimal(distance)+"!~!"+str1[1]);
+					dist.add(strValues);
+				}else{
+					if(distance==0.0){
+						dis1=0;
+						String[] strValues = new String[5];
+						strValues[0] = str1[0];
+						strValues[1] = str1[2];
+						strValues[2] = String.valueOf(count);
+						strValues[3] = String.valueOf(dis1);
+						strValues[4] = str1[1];
+						//dist.add(str1[0]+"!~!"+str1[2]+"!~!"+count+"!~!"+dis1+"!~!"+str1[1]);
+						dist.add(strValues);
+					}else{
+						String[] strValues = new String[5];
+						strValues[0] = str1[0];
+						strValues[1] = str1[2];
+						strValues[2] = String.valueOf(count);
+						strValues[3] = String.valueOf(distance);
+						strValues[4] = str1[1];
+						//dist.add(str1[0]+"!~!"+str1[2]+"!~!"+count+"!~!"+distance+"!~!"+str1[1]);
+						dist.add(strValues);
+					}
+				}
+				count=count+1;
+				dis=Double.parseDouble(str1[1]);
+			}else{	
+				count=0;
+				dis=Double.parseDouble(str1[1]);
+				chr=str1[0];
+				if(mapUnit.equalsIgnoreCase("bp")){
+					String[] strValues = new String[5];
+					strValues[0] = str1[0];
+					strValues[1] = str1[2];
+					strValues[2] = String.valueOf(count);
+					strValues[3] = String.valueOf(new BigDecimal(dis));
+					strValues[4] = str1[1];
+					//dist.add(str1[0]+"!~!"+str1[2]+"!~!"+count+"!~!"+new BigDecimal(dis)+"!~!"+str1[1]);
+					dist.add(strValues);
+				}else{
+					if(dis==0.0){
+						dis1=0;
+						String[] strValues = new String[5];
+						strValues[0] = str1[0];
+						strValues[1] = str1[2];
+						strValues[2] = String.valueOf(count);
+						strValues[3] = String.valueOf(dis1);
+						strValues[4] = String.valueOf(dis1);
+						//dist.add(str1[0]+"!~!"+str1[2]+"!~!"+count+"!~!"+dis1+"!~!"+dis1);
+						dist.add(strValues);
+					}else{
+						String[] strValues = new String[5];
+						strValues[0] = str1[0];
+						strValues[1] = str1[2];
+						strValues[2] = String.valueOf(count);
+						strValues[3] = String.valueOf(dis1);
+						strValues[4] = str1[1];
+						//dist.add(str1[0]+"!~!"+str1[2]+"!~!"+count+"!~!"+dis+"!~!"+str1[1]);
+						dist.add(strValues);
+					}
+
+				}
+				count=count+1;	
+			}
+		}
+		return dist;
+	}
+
+
 	public double roundThree(double in){		
 		return Math.round(in*1000.0)/1000.0;
 	}
-		
 	
 	private Table buildmapTable() {
 		_mapTable = new Table();

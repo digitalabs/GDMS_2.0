@@ -22,6 +22,8 @@ import org.hibernate.Session;
 import org.icrisat.gdms.common.GDMSException;
 import org.icrisat.gdms.ui.common.GDMSModel;
 
+import com.vaadin.ui.Window.Notification;
+
 public class RetrievePolymorphicMarker {
 	private Session centralSession = null;
 	private Session localSession = null;
@@ -32,11 +34,26 @@ public class RetrievePolymorphicMarker {
 	List<String> genotypeList=new ArrayList<String>();
 	List<Integer> listofGids = new ArrayList<Integer>();
 	public RetrievePolymorphicMarker() {
-		localSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
+		try{
+			//factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
+			factory=GDMSModel.getGDMSModel().getManagerFactory();
+			
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+			genoManager=factory.getGenotypicDataManager();
+			manager=factory.getGermplasmDataManager();
+			
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+		
+		
+		/*localSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal().getSession();
 		centralSession = GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral().getSession();
 		factory = new ManagerFactory(GDMSModel.getGDMSModel().getLocalParams(), GDMSModel.getGDMSModel().getCentralParams());
 		genoManager=factory.getGenotypicDataManager();
-		manager=factory.getGermplasmDataManager();
+		manager=factory.getGermplasmDataManager();*/
 	}
 
 	public List<Name> getNames(String theSelectedGName, String strSelectedPolymorphicType) throws GDMSException {
@@ -63,7 +80,7 @@ public class RetrievePolymorphicMarker {
 	                (int) genoManager.countGdmsAccMetadatasetByGid(listofGids));
 	        //System.out.println("testGetGdmsAccMetadatasetByGid() RESULTS: ");
 	        for (AccMetadataSetPK accMetadataSet : accMetadataSets) {
-	            //System.out.println("@@@@@@@@@@@@@@@@@@@@  :"+accMetadataSet.toString());
+	            System.out.println("@@@@@@@@@@@@@@@@@@@@  :"+accMetadataSet.toString());
 	            Integer datasetId = accMetadataSet.getDatasetId();
 	            gid = accMetadataSet.getGermplasmId();
 				nid = accMetadataSet.getNameId();
@@ -100,7 +117,7 @@ public class RetrievePolymorphicMarker {
 			}
 			
 			List<Name> namesByNIds = getNamesByNIds(nidByMarkerIdsAndDatasetIdsAndNotGIds);
-			//System.out.println("%%%%%%%%%%%%%  :"+namesByNIds);
+			System.out.println("%%%%%%%%%%%%%  :"+namesByNIds);
 			return namesByNIds;
 			
 			
@@ -113,6 +130,7 @@ public class RetrievePolymorphicMarker {
 	private List<Name> getNamesByNIds(
 			List<Integer> nidByMarkerIdsAndDatasetIdsAndNotGIds)
 			throws MiddlewareQueryException {
+		
 		List<Name> listOfNames = new ArrayList<Name>();
 		List<Name> localNamesByNIds = getLocalNamesByNIds(nidByMarkerIdsAndDatasetIdsAndNotGIds);
 		for (Name name : localNamesByNIds) {
@@ -131,10 +149,17 @@ public class RetrievePolymorphicMarker {
 		nameDAO.setSession(localSession);
 		List<Name> namesByNameIds = nameDAO.getNamesByNameIds(nidByMarkerIdsAndDatasetIdsAndNotGIds);
 		return namesByNameIds;*/
+		try{
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
 		
+		} catch (Exception e){
+			e.printStackTrace();
+			
+		}
 		NameDAO nameDAO = new NameDAO();
 		nameDAO.setSession(centralSession);
 		List<Name> namesByNameIds = nameDAO.getNamesByNameIds(nidByMarkerIdsAndDatasetIdsAndNotGIds);
+		
 		return namesByNameIds;
 	}
 
@@ -151,7 +176,13 @@ public class RetrievePolymorphicMarker {
 		nameDAO.setSession(localSession);
 		List<Name> namesByNameIds = nameDAO.getNamesByNameIds(nidByMarkerIdsAndDatasetIdsAndNotGIds);
 		return namesByNameIds;*/
+		try{
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
 		
+		} catch (Exception e){
+			e.printStackTrace();
+			
+		}
 		NameDAO nameDAO = new NameDAO();
 		nameDAO.setSession(localSession);
 		List<Name> namesByNameIds = nameDAO.getNamesByNameIds(nidByMarkerIdsAndDatasetIdsAndNotGIds);
@@ -185,10 +216,17 @@ public class RetrievePolymorphicMarker {
 		accMetadataSetDAO.setSession(centralSession);*/
 		//Set<Integer> nIdsByMarkerIdsAndDatasetIdsAndNotGIds = accMetadataSetDAO.getNIdsByMarkerIdsAndDatasetIdsAndNotGIds(listOfDatasetIds, markerMetadataSet, listofGids);
 		//getNIdsByMarkerIdsAndDatasetIds(datasetIdList, markerIDList, 0, manager1.countNIdsByMarkerIdsAndDatasetIds(datasetIdList, markerIDList))
-		
-		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl(localSession, centralSession);
-		int countNIdsByMarkerIdsAndDatasetIds = genotypicDataManagerImpl.countNIdsByMarkerIdsAndDatasetIds(listOfDatasetIds, markerMetadataSet);
-		List<Integer> nIdsByMarkerIdsAndDatasetIds2 = genotypicDataManagerImpl.getNIdsByMarkerIdsAndDatasetIds(listOfDatasetIds, markerMetadataSet, 0, countNIdsByMarkerIdsAndDatasetIds);
+		/*try{
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+			
+		} catch (Exception e){
+			e.printStackTrace();
+			
+		}*/
+		//GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl(localSession, centralSession);
+		int countNIdsByMarkerIdsAndDatasetIds = genoManager.countNIdsByMarkerIdsAndDatasetIds(listOfDatasetIds, markerMetadataSet);
+		List<Integer> nIdsByMarkerIdsAndDatasetIds2 = genoManager.getNIdsByMarkerIdsAndDatasetIds(listOfDatasetIds, markerMetadataSet, 0, countNIdsByMarkerIdsAndDatasetIds);
 		
 		return nIdsByMarkerIdsAndDatasetIds2;
 		//return nIdsByMarkerIdsAndDatasetIdsAndNotGIds;
@@ -222,6 +260,14 @@ public class RetrievePolymorphicMarker {
 
 	private List<Integer> getCentralMarkerMetadataSet(
 			List<Integer> listOfDatasetIds, Integer gid) throws MiddlewareQueryException {
+		try{
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+		
+		} catch (Exception e){
+			e.printStackTrace();
+			
+		}
+		
 		MarkerMetadataSetDAO markerMetadataSetDAO = new MarkerMetadataSetDAO();
 		markerMetadataSetDAO.setSession(centralSession);
 		List<Integer> markersByGidAndDatasetIds = markerMetadataSetDAO.getMarkersByGidAndDatasetIds(gid, listOfDatasetIds, 0, (int) markerMetadataSetDAO.countAll());
@@ -230,6 +276,13 @@ public class RetrievePolymorphicMarker {
 
 	private List<Integer> getLocalMarkerMetadataSet(List<Integer> listOfDatasetIds,
 			Integer gid) throws MiddlewareQueryException {
+		try{
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+		
+		} catch (Exception e){
+			e.printStackTrace();
+			
+		}
 		MarkerMetadataSetDAO markerMetadataSetDAO = new MarkerMetadataSetDAO();
 		markerMetadataSetDAO.setSession(localSession);
 		List<Integer> markersByGidAndDatasetIds = markerMetadataSetDAO.getMarkersByGidAndDatasetIds(gid, listOfDatasetIds, 0, (int) markerMetadataSetDAO.countAll());
@@ -252,6 +305,13 @@ public class RetrievePolymorphicMarker {
 	}
 
 	private List<AccMetadataSetPK> getCentralAccMetaDataSetByGids(List<Integer> listofGids) throws MiddlewareQueryException {
+		try{
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+		
+		} catch (Exception e){
+			e.printStackTrace();
+			
+		}
 		AccMetadataSetDAO accMetadataSetDAO = new AccMetadataSetDAO();
 		accMetadataSetDAO.setSession(centralSession);
 		List<AccMetadataSetPK> accMetadataSetByGids = accMetadataSetDAO.getAccMetadataSetByGids(listofGids, 0, (int)accMetadataSetDAO.countAll());
@@ -260,6 +320,13 @@ public class RetrievePolymorphicMarker {
 
 	private List<AccMetadataSetPK> getLocalAccMetaDataSetByGids(List<Integer> listofGids)
 			throws MiddlewareQueryException {
+		try{
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+		
+		} catch (Exception e){
+			e.printStackTrace();
+			
+		}
 		AccMetadataSetDAO accMetadataSetDAO = new AccMetadataSetDAO();
 		accMetadataSetDAO.setSession(localSession);
 		List<AccMetadataSetPK> accMetadataSetByGids = accMetadataSetDAO.getAccMetadataSetByGids(listofGids, 0, (int)accMetadataSetDAO.countAll());
@@ -288,6 +355,13 @@ public class RetrievePolymorphicMarker {
 	private List<GidNidElement> getCentralGidAndNidByGermplasmNames(
 			List<String> strNames) throws MiddlewareQueryException {
 		NameDAO nameDAO = new NameDAO();
+		try{
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+		
+		} catch (Exception e){
+			e.printStackTrace();
+			
+		}
 		nameDAO.setSession(centralSession);
 		List<GidNidElement> gidAndNidByGermplasmNames = nameDAO.getGidAndNidByGermplasmNames(strNames);
 		return gidAndNidByGermplasmNames;
@@ -295,6 +369,13 @@ public class RetrievePolymorphicMarker {
 
 	private List<GidNidElement> getLocalGidAndNidByGermplasmNames(
 			List<String> strNames) throws MiddlewareQueryException {
+		try{
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+		
+		} catch (Exception e){
+			e.printStackTrace();
+			
+		}
 		NameDAO nameDAO = new NameDAO();
 		nameDAO.setSession(localSession);
 		List<GidNidElement> gidAndNidByGermplasmNames = nameDAO.getGidAndNidByGermplasmNames(strNames);
@@ -306,9 +387,9 @@ public class RetrievePolymorphicMarker {
 		List<Integer> listofDatasetId = new ArrayList<Integer>();
 		try {
 			listofDatasetId = getDatasetIDs();
-			//System.out.println("dataset IDS:"+listofDatasetId);
+			System.out.println("dataset IDS:"+listofDatasetId);
 			listOfParentsFromMappingPopulation = getMappingPop();
-			//System.out.println(".......parents:"+listOfParentsFromMappingPopulation);
+			System.out.println(".......parents:"+listOfParentsFromMappingPopulation);
 			
 			/** Commented by Kalyani on 23 OCT 2013 while testing the functionality   **/
 			//List<Integer> niDsByDatasetIds = getAccMetadataSetByParentMappingPopulationAndDatasetId(listOfParentsFromMappingPopulation, listofDatasetId);
@@ -341,6 +422,13 @@ public class RetrievePolymorphicMarker {
 
 	private List<Name> getCentralName(List<Integer> niDsByDatasetIds) throws MiddlewareQueryException {
 		NameDAO nameDAO = new NameDAO();
+		try{
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+		
+		} catch (Exception e){
+			e.printStackTrace();
+			
+		}
 		nameDAO.setSession(centralSession);
 		List<Name> namesByNameIds = nameDAO.getNamesByNameIds(niDsByDatasetIds);
 		return namesByNameIds;
@@ -348,6 +436,13 @@ public class RetrievePolymorphicMarker {
 
 	private List<Name> getLocalName(List<Integer> niDsByDatasetIds) throws MiddlewareQueryException {
 		NameDAO nameDAO = new NameDAO();
+		try{
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+		
+		} catch (Exception e){
+			e.printStackTrace();
+			
+		}
 		nameDAO.setSession(localSession);
 		List<Name> namesByNameIds = nameDAO.getNamesByNameIds(niDsByDatasetIds);
 		return namesByNameIds;
@@ -377,19 +472,19 @@ public class RetrievePolymorphicMarker {
 	private List<Integer> getAccMetaDatasetFromBothCentralAndLocal(
 			List<Integer> listofDatasetId) throws MiddlewareQueryException {
 		
-		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl(localSession, centralSession);
+	//	GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl(localSession, centralSession);
 		long countDatasetIdsForMapping = 0l;
-		//System.out.println("..............  strSelectedPolymorphicType=:"+strSelectedPolymorphicType+"    "+listofDatasetId);
+		System.out.println("..............  strSelectedPolymorphicType=:"+strSelectedPolymorphicType+"    "+listofDatasetId);
 		if (strSelectedPolymorphicType.equalsIgnoreCase("Mapping")) {
-			countDatasetIdsForMapping = genotypicDataManagerImpl.countDatasetIdsForMapping();
+			countDatasetIdsForMapping = genoManager.countDatasetIdsForMapping();
 		} else {
-			countDatasetIdsForMapping = genotypicDataManagerImpl.countDatasetIdsForFingerPrinting();
-			//System.out.println("count=:"+countDatasetIdsForMapping);
+			countDatasetIdsForMapping = genoManager.countDatasetIdsForFingerPrinting();
+			System.out.println("count=:"+countDatasetIdsForMapping);
 		}
-		List<Integer> nidsFromAccMetadatasetByDatasetIds = genotypicDataManagerImpl.getNidsFromAccMetadatasetByDatasetIds(listofDatasetId, 0, 500);
+		List<Integer> nidsFromAccMetadatasetByDatasetIds = genoManager.getNidsFromAccMetadatasetByDatasetIds(listofDatasetId, 0, 500);
 		//genotypicDataManagerImpl.countn
 		//List<Integer> nidsFromAccMetadatasetByDatasetIds = genotypicDataManagerImpl.getNidsFromAccMetadatasetByDatasetIds(listofDatasetId, 0, (int)genotypicDataManagerImpl.countNidsFromAccMetadatasetByDatasetIds(listofDatasetId));
-		//System.out.println("^^^^^^^^^^^^^^^^^^^^^:"+nidsFromAccMetadatasetByDatasetIds);
+		System.out.println("^^^^^^^^^^^^^^^^^^^^^:"+nidsFromAccMetadatasetByDatasetIds);
 		return nidsFromAccMetadatasetByDatasetIds;
 		
 	}
@@ -438,16 +533,35 @@ public class RetrievePolymorphicMarker {
 
 	private List<ParentElement> getCentralMappingPop() throws MiddlewareQueryException {
 		MappingPopDAO mappingPopDAO = new MappingPopDAO();
+		try{
+			centralSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral().getSession();
+		
+		} catch (Exception e){
+			e.printStackTrace();
+			
+		}
 		mappingPopDAO.setSession(centralSession);
-		List<ParentElement> allParentsFromMappingPopulation = mappingPopDAO.getAllParentsFromMappingPopulation(0, (int)mappingPopDAO.countAll());
+		//List<ParentElement> allParentsFromMappingPopulation = mappingPopDAO.getAllParentsFromMappingPopulation(0, (int)mappingPopDAO.countAll());
+		List<ParentElement> allParentsFromMappingPopulation = genoManager.getAllParentsFromMappingPopulation(0, (int)mappingPopDAO.countAll());
+
 		return allParentsFromMappingPopulation;
 	}
 
 	private List<ParentElement> getLocalMappingPop()
 			throws MiddlewareQueryException {
 		MappingPopDAO mappingPopDAO = new MappingPopDAO();
+		try{
+			localSession = GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal().getSession();
+		
+		} catch (Exception e){
+			e.printStackTrace();
+			
+		}
 		mappingPopDAO.setSession(localSession);
-		List<ParentElement> allParentsFromMappingPopulation = mappingPopDAO.getAllParentsFromMappingPopulation(0, (int)mappingPopDAO.countAll());
+		
+		//List<ParentElement> allParentsFromMappingPopulation = mappingPopDAO.getAllParentsFromMappingPopulation(0, (int)mappingPopDAO.countAll());
+		List<ParentElement> allParentsFromMappingPopulation = genoManager.getAllParentsFromMappingPopulation(0, (int)mappingPopDAO.countAll());
+		
 		return allParentsFromMappingPopulation;
 	}
 
