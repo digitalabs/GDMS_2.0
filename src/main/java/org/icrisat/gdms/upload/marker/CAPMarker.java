@@ -307,7 +307,7 @@ public class CAPMarker implements UploadMarker {
 	@Override
 	public void createObjectsToBeSavedToDB() throws GDMSException {
 		
-		Integer iMarkerID = 0;
+		Integer iMarkerID = null;
 		String strMarkerType = "CAP";
 		int iUploadedMarkerCount = 0;
 		int iNumOfNewMarkers = listOfNewMarkersToBeSavedToDB.size();
@@ -387,7 +387,7 @@ public class CAPMarker implements UploadMarker {
 		
 		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
 		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal());
-		genotypicDataManagerImpl.setSessionProviderForCentral(null);
+        genotypicDataManagerImpl.setSessionProviderForCentral(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral());
 
 		try {
 			genotypicDataManagerImpl.setCAPMarkers(marker, markerAlias, markerDetails, markerUserInfo);

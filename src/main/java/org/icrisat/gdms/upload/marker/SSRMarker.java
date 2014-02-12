@@ -344,7 +344,7 @@ public class SSRMarker implements UploadMarker {
 
 	public void createObjectsToBeSavedToDB() throws GDMSException {
 
-		Integer iMarkerID = 0;
+		Integer iMarkerID = null;
 		String strMarkerType = "SSR";
 		int iUploadedMarkerCount = 0;
 		int iNumOfNewMarkers = listOfNewMarkersToBeSavedToDB.size();

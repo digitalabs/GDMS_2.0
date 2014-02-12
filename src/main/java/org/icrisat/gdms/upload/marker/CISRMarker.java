@@ -342,7 +342,7 @@ public class CISRMarker implements UploadMarker {
 	@Override
 	public void createObjectsToBeSavedToDB() throws GDMSException {
 
-		Integer iMarkerID = 0;
+		Integer iMarkerID = null;
 		String strMarkerType = "CISR";
 		int iUploadedMarkerCount = 0;
 		int iNumOfNewMarkers = listOfNewMarkersToBeSavedToDB.size();
@@ -445,7 +445,7 @@ public class CISRMarker implements UploadMarker {
 	private void saveCISRMarker() throws GDMSException {
 		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
 		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal());
-		genotypicDataManagerImpl.setSessionProviderForCentral(null);
+        genotypicDataManagerImpl.setSessionProviderForCentral(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral());
 
 		try {
 			genotypicDataManagerImpl.setCISRMarkers(marker, markerAlias, markerDetails, markerUserInfo);

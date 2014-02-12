@@ -311,7 +311,7 @@ public class SNPMarker implements UploadMarker {
 	@Override
 	public void createObjectsToBeSavedToDB() throws GDMSException {
 
-		Integer iMarkerID = 0;
+		Integer iMarkerID = null;
 		String strMarkerType = "SNP";
 		int iUploadedMarkerCount = 0;
 		int iNumOfNewMarkers = listOfNewMarkersToBeSavedToDB.size();
@@ -381,7 +381,7 @@ public class SNPMarker implements UploadMarker {
 	public void saveSNPMarker() throws GDMSException {
 		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
 		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForLocal());
-		genotypicDataManagerImpl.setSessionProviderForCentral(null);
+		genotypicDataManagerImpl.setSessionProviderForCentral(GDMSModel.getGDMSModel().getManagerFactory().getSessionProviderForCentral());
 
 		try {
 			genotypicDataManagerImpl.setSNPMarkers(marker, markerAlias, markerDetails, markerUserInfo);

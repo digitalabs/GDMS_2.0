@@ -1301,7 +1301,7 @@ public class MappingGenotype implements UploadMarker {
 	protected void saveMappingABH() throws GDMSException {
 		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
 		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
-		genotypicDataManagerImpl.setSessionProviderForCentral(null);
+		genotypicDataManagerImpl.setSessionProviderForCentral(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral());
 		try {
 			genotypicDataManagerImpl.setMappingABH(dataset, datasetUser, mappingPop, listOfMPABHDataRows);
 			//genotypicDataManagerImpl.setMappingData(accMetadataSet, markerMetadataSet, datasetUser, mappingPop, mappingPopValues, dataset);
@@ -1316,7 +1316,7 @@ public class MappingGenotype implements UploadMarker {
 	protected void saveMappingAllelicSSRDArT() throws GDMSException {
 		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
 		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
-		genotypicDataManagerImpl.setSessionProviderForCentral(null);
+        genotypicDataManagerImpl.setSessionProviderForCentral(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral());
 		try {
 			genotypicDataManagerImpl.setMappingAllelicSSRDArT(dataset, datasetUser, mappingPop, listOfMPSSRDataRows);
 			//genotypicDataManagerImpl.setMappingData(accMetadataSet, markerMetadataSet, datasetUser, mappingPop, mappingPopValues, dataset);
@@ -1331,7 +1331,7 @@ public class MappingGenotype implements UploadMarker {
 	protected void saveMappingAllelicSNP() throws GDMSException {
 		GenotypicDataManagerImpl genotypicDataManagerImpl = new GenotypicDataManagerImpl();
 		genotypicDataManagerImpl.setSessionProviderForLocal(GDMSModel.getGDMSModel().getHibernateSessionProviderForLocal());
-		genotypicDataManagerImpl.setSessionProviderForCentral(null);
+        genotypicDataManagerImpl.setSessionProviderForCentral(GDMSModel.getGDMSModel().getHibernateSessionProviderForCentral());
 		try {
 			genotypicDataManagerImpl.setMappingAllelicSNP(dataset, datasetUser, mappingPop, listOfMPSNPDataRows);
 			//genotypicDataManagerImpl.setMappingData(accMetadataSet, markerMetadataSet, datasetUser, mappingPop, mappingPopValues, dataset);
